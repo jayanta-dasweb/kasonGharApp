@@ -3,9 +3,13 @@ import { supabase } from '@/lib/supabase';
 import type { StockMove } from '@/types/database';
 
 async function getLocationByUsage(usage: string, userId?: string | null) {
-  let q = supabase.from('stock_locations').select('*').eq('usage', usage).eq('is_active', true);
+  let q = supabase
+    .from('stock_locations')
+    .select('*')
+    .eq('usage', usage)
+    .eq('is_active', true);
   if (usage === 'SALESPERSON' && userId) {
-    q = q.eq('user_id', userId);
+    q = q.eq('assigned_user_id', userId);
   }
   const { data, error } = await q.limit(1).maybeSingle();
   if (error) throw error;
@@ -18,7 +22,7 @@ export async function getOfficeStockValue() {
   const { data, error } = await supabase
     .from('stock_quants')
     .select('quantity, product_id, master_products(vendor_cost_price)')
-    .eq('location_id', office.id);
+    .eq('location_id', office.location_id);
   if (error) throw error;
   return (data ?? []).reduce((sum, row) => {
     const cost = (row.master_products as { vendor_cost_price: number } | null)?.vendor_cost_price ?? 0;
@@ -29,11 +33,11 @@ export async function getOfficeStockValue() {
 export async function getConsignmentStockValue() {
   const { data: locs, error: locErr } = await supabase
     .from('stock_locations')
-    .select('id')
+    .select('location_id')
     .eq('usage', 'SALESPERSON')
     .eq('is_active', true);
   if (locErr) throw locErr;
-  const ids = (locs ?? []).map((l) => l.id);
+  const ids = (locs ?? []).map((l) => l.location_id);
   if (!ids.length) return 0;
 
   const { data, error } = await supabase
@@ -50,7 +54,7 @@ export async function getConsignmentStockValue() {
 export async function getQuantsForProduct(productId: string) {
   const { data, error } = await supabase
     .from('stock_quants')
-    .select('*, stock_locations(name, usage, user_id)')
+    .select('*, stock_locations(location_name, usage, assigned_user_id)')
     .eq('product_id', productId);
   if (error) throw error;
   return data ?? [];
@@ -61,7 +65,7 @@ export async function getMyStock(userId: string) {
   const { data, error } = await supabase
     .from('stock_quants')
     .select('quantity, master_products(id, product_code, name, company_mrp, min_selling_price)')
-    .eq('location_id', loc.id)
+    .eq('location_id', loc.location_id)
     .gt('quantity', 0);
   if (error) throw error;
   return data ?? [];
@@ -91,8 +95,8 @@ export async function createVendorPurchase(input: {
       .from('stock_moves')
       .insert({
         product_id: line.product_id,
-        location_id: supplier.id,
-        location_dest_id: office.id,
+        location_id: supplier.location_id,
+        location_dest_id: office.location_id,
         quantity: line.quantity,
         state: 'DONE',
         reference: input.invoice_number,
@@ -177,8 +181,8 @@ export async function allocateToSalesperson(input: {
     .from('stock_moves')
     .insert({
       product_id: input.product_id,
-      location_id: office.id,
-      location_dest_id: spLoc.id,
+      location_id: office.location_id,
+      location_dest_id: spLoc.location_id,
       quantity: input.quantity,
       state: 'DONE',
       reference: `ALLOC/${todayISO()}`,
@@ -204,8 +208,8 @@ export async function returnFromSalesperson(input: {
     .from('stock_moves')
     .insert({
       product_id: input.product_id,
-      location_id: spLoc.id,
-      location_dest_id: office.id,
+      location_id: spLoc.location_id,
+      location_dest_id: office.location_id,
       quantity: input.quantity,
       state: 'DONE',
       reference: `RET/${todayISO()}`,

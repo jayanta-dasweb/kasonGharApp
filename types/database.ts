@@ -9,15 +9,16 @@ export interface Database {
     Tables: {
       users_master: {
         Row: {
-          id: string;
-          auth_user_id: string | null;
+          user_id: string;
           full_name: string;
           phone: string;
-          email_alias: string | null;
-          is_active: boolean;
+          email: string | null;
+          status: string;
           created_at: string;
+          updated_at: string;
         };
         Insert: Partial<Database['public']['Tables']['users_master']['Row']> & {
+          user_id: string;
           full_name: string;
           phone: string;
         };
@@ -134,16 +135,19 @@ export interface Database {
       };
       stock_locations: {
         Row: {
-          id: string;
-          name: string;
+          location_id: number;
+          location_code: string;
+          location_name: string;
           usage: LocationUsage;
-          user_id: string | null;
+          assigned_user_id: string | null;
           is_active: boolean;
+          created_at: string;
         };
         Insert: {
-          name: string;
+          location_code: string;
+          location_name: string;
           usage: LocationUsage;
-          user_id?: string | null;
+          assigned_user_id?: string | null;
           is_active?: boolean;
         };
         Update: Partial<Database['public']['Tables']['stock_locations']['Row']>;

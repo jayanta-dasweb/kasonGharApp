@@ -20,7 +20,7 @@ export async function createSalesReconciliation(input: {
 
   if (sourceUsage === 'SALESPERSON') {
     if (!input.salesperson_id) throw new Error('Salesperson required for consignment sale');
-    sourceQ = sourceQ.eq('user_id', input.salesperson_id);
+    sourceQ = sourceQ.eq('assigned_user_id', input.salesperson_id);
   }
 
   const { data: sourceLoc, error: srcErr } = await sourceQ.limit(1).maybeSingle();
@@ -48,8 +48,8 @@ export async function createSalesReconciliation(input: {
     .from('stock_moves')
     .insert({
       product_id: input.product_id,
-      location_id: sourceLoc.id,
-      location_dest_id: customerLoc.id,
+      location_id: sourceLoc.location_id,
+      location_dest_id: customerLoc.location_id,
       quantity: input.quantity,
       state: 'DONE',
       reference: `SALE/${todayISO()}`,

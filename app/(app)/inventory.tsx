@@ -70,7 +70,7 @@ export default function InventoryScreen() {
         await createVendorPurchase({
           vendor_id: vendorId,
           invoice_number: invoice,
-          created_by: profile?.id,
+          created_by: profile?.user_id,
           lines: [
             {
               product_id: productId,
@@ -85,7 +85,7 @@ export default function InventoryScreen() {
           product_id: productId,
           quantity: Number(qty),
           salesperson_user_id: salespersonId,
-          created_by: profile?.id,
+          created_by: profile?.user_id,
         });
         setOk('Stock allocated to salesperson');
       } else {
@@ -93,7 +93,7 @@ export default function InventoryScreen() {
           product_id: productId,
           quantity: Number(qty),
           salesperson_user_id: salespersonId,
-          created_by: profile?.id,
+          created_by: profile?.user_id,
         });
         setOk('Unsold stock returned to office');
       }

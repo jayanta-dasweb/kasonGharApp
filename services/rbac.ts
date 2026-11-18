@@ -68,11 +68,11 @@ export async function onboardStaff(input: {
   const { data: profile, error: profileErr } = await supabase
     .from('users_master')
     .insert({
+      user_id: authData.user.id,
       full_name: input.full_name,
       phone,
-      email_alias: email,
-      auth_user_id: authData.user.id,
-      is_active: true,
+      email,
+      status: 'ACTIVE',
     })
     .select()
     .single();
@@ -81,11 +81,10 @@ export async function onboardStaff(input: {
   const { error: roleErr } = await supabase.from('model_has_roles').insert({
     role_id: input.role_id,
     model_type: 'App\\Models\\User',
-    model_id: profile.id,
+    model_id: profile.user_id,
   });
   if (roleErr) throw roleErr;
 
-  // Ensure salesperson location exists when role needs it
   const { data: role } = await supabase
     .from('roles')
     .select('name')
@@ -93,10 +92,12 @@ export async function onboardStaff(input: {
     .maybeSingle();
 
   if (role?.name?.toLowerCase().includes('sales')) {
+    const code = `LOC-SP-${phone.slice(-4)}`;
     await supabase.from('stock_locations').insert({
-      name: `${input.full_name} Bag`,
+      location_code: code,
+      location_name: `${input.full_name} Bag`,
       usage: 'SALESPERSON',
-      user_id: profile.id,
+      assigned_user_id: profile.user_id,
       is_active: true,
     });
   }
@@ -115,13 +116,13 @@ export async function listAuditLogs(limit = 50) {
 }
 
 export async function checkHasPermission(name: string) {
-  const { data, error } = await supabase.rpc('has_permission', { name });
+  const { data, error } = await supabase.rpc('has_permission', { perm_name: name });
   if (error) throw error;
   return Boolean(data);
 }
 
 export async function checkHasRole(name: string) {
-  const { data, error } = await supabase.rpc('has_role', { name });
+  const { data, error } = await supabase.rpc('has_role', { role_name: name });
   if (error) throw error;
   return Boolean(data);
 }

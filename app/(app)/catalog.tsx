@@ -101,7 +101,9 @@ export default function CatalogScreen() {
                 {expanded === id
                   ? quants.map((q) => (
                       <Text key={q.id} className="mt-1 text-xs text-slate-600">
-                        {(q.stock_locations as any)?.name}: {q.quantity}
+                        {(q.stock_locations as any)?.location_name ??
+                          (q.stock_locations as any)?.name}
+                        : {q.quantity}
                       </Text>
                     ))
                   : null}

@@ -103,7 +103,7 @@ export default function RbacScreen() {
             <View key={u.id} className="mb-2 rounded-xl bg-white p-3">
               <Text className="font-semibold text-ink">{u.full_name}</Text>
               <Text className="text-xs text-slate-500">
-                {u.phone} · {u.is_active ? 'Active' : 'Inactive'}
+                {u.phone} · {u.status ?? 'ACTIVE'}
               </Text>
             </View>
           ))

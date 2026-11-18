@@ -28,11 +28,24 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+const CRITICAL_PERMS = [
+  'masters.manage',
+  'products.manage',
+  'inventory.manage',
+  'sales.reconcile',
+  'reports.export',
+  'users.manage',
+  'rbac.manage',
+  'audit.view',
+  'users.view',
+] as const;
+
 async function loadProfile(authUserId: string) {
+  // Live schema: users_master.user_id == auth.users.id
   const { data: profile, error } = await supabase
     .from('users_master')
     .select('*')
-    .eq('auth_user_id', authUserId)
+    .eq('user_id', authUserId)
     .maybeSingle();
 
   if (error) throw error;
@@ -40,18 +53,20 @@ async function loadProfile(authUserId: string) {
   const roles: string[] = [];
   const permissions: string[] = [];
 
-  const [{ data: isSuper }, { data: isAdmin }] = await Promise.all([
-    supabase.rpc('has_role', { name: 'super_admin' }),
-    supabase.rpc('has_role', { name: 'admin' }),
-  ]);
+  const { data: isSuper } = await supabase.rpc('has_role', {
+    role_name: 'super_admin',
+  });
+  const { data: isAdminRole } = await supabase.rpc('has_role', {
+    role_name: 'admin',
+  });
   if (isSuper) roles.push('super_admin');
-  if (isAdmin) roles.push('admin');
+  if (isAdminRole) roles.push('admin');
 
-  if (profile?.id) {
+  if (profile?.user_id) {
     const { data: modelRoles } = await supabase
       .from('model_has_roles')
       .select('role_id')
-      .eq('model_id', profile.id);
+      .eq('model_id', profile.user_id);
 
     const roleIds = (modelRoles ?? []).map((r) => r.role_id);
     if (roleIds.length) {
@@ -65,40 +80,49 @@ async function loadProfile(authUserId: string) {
     }
   }
 
-  // Super/admin short-circuit — skip 8 sequential RPCs
   if (roles.includes('super_admin') || roles.includes('admin')) {
-    permissions.push(
-      'masters.manage',
-      'products.manage',
-      'inventory.manage',
-      'sales.reconcile',
-      'reports.export',
-      'users.manage',
-      'rbac.manage',
-      'audit.view'
-    );
+    permissions.push(...CRITICAL_PERMS);
     return { profile, roles, permissions };
   }
 
-  const criticalPerms = [
-    'masters.manage',
-    'products.manage',
-    'inventory.manage',
-    'sales.reconcile',
-    'reports.export',
-    'users.manage',
-    'rbac.manage',
-    'audit.view',
-  ];
-
+  // Prefer has_permission(permission_name) if present; fall back to Spatie join
   const permResults = await Promise.all(
-    criticalPerms.map(async (name) => {
-      const { data } = await supabase.rpc('has_permission', { name });
-      return data ? name : null;
+    CRITICAL_PERMS.map(async (perm_name) => {
+      const { data, error } = await supabase.rpc('has_permission', {
+        perm_name,
+      });
+      if (!error && data) return perm_name;
+      return null;
     })
   );
-  for (const name of permResults) {
-    if (name) permissions.push(name);
+
+  const fromRpc = permResults.filter(Boolean) as string[];
+  if (fromRpc.length) {
+    permissions.push(...fromRpc);
+    return { profile, roles, permissions };
+  }
+
+  // Fallback: role_has_permissions for assigned roles
+  const { data: modelRoles } = await supabase
+    .from('model_has_roles')
+    .select('role_id')
+    .eq('model_id', authUserId);
+  const roleIds = (modelRoles ?? []).map((r) => r.role_id);
+  if (roleIds.length) {
+    const { data: links } = await supabase
+      .from('role_has_permissions')
+      .select('permission_id')
+      .in('role_id', roleIds);
+    const permIds = (links ?? []).map((l) => l.permission_id);
+    if (permIds.length) {
+      const { data: perms } = await supabase
+        .from('permissions')
+        .select('name')
+        .in('id', permIds);
+      for (const p of perms ?? []) {
+        if (p.name) permissions.push(p.name);
+      }
+    }
   }
 
   return { profile, roles, permissions };

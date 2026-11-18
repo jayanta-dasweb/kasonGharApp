@@ -58,8 +58,8 @@ export default function DashboardScreen() {
             setProfit(Number(row.net_profit ?? profit));
           }
         }
-      } else if (profile?.id) {
-        const stock = await getMyStock(profile.id);
+      } else if (profile?.user_id) {
+        const stock = await getMyStock(profile.user_id);
         setMyStock(stock);
       }
     } catch (e) {
@@ -68,7 +68,7 @@ export default function DashboardScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [isAdmin, period, profile?.id]);
+  }, [isAdmin, period, profile?.user_id]);
 
   useFocusEffect(
     useCallback(() => {

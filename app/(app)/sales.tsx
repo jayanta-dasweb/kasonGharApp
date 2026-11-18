@@ -66,7 +66,7 @@ export default function SalesScreen() {
         channel,
         customer_id: customerId,
         salesperson_id: channel === 'consignment' ? salespersonId : null,
-        created_by: profile?.id,
+        created_by: profile?.user_id,
       });
       setOk('Sale reconciled: stock + OUT_INVOICE + sales_reconciliation');
       setQty('1');
