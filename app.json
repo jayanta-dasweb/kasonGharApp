@@ -38,7 +38,15 @@
       ],
       "expo-secure-store",
       "expo-sharing",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-background-task",
+      [
+        "expo-notifications",
+        {
+          "color": "#6B1E2A",
+          "defaultChannel": "notices"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

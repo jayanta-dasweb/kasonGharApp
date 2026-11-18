@@ -1,10 +1,12 @@
 import '../global.css';
+import '@/services/backgroundNotices';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { AuthProvider } from '@/lib/auth';
 import { colors } from '@/constants/theme';
+import { registerNoticeBackgroundTask } from '@/services/backgroundNotices';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
@@ -12,6 +14,7 @@ export default function RootLayout() {
   useEffect(() => {
     // Hand off quickly to the animated in-app splash
     SplashScreen.hideAsync().catch(() => undefined);
+    registerNoticeBackgroundTask().catch(() => undefined);
   }, []);
 
   return (
