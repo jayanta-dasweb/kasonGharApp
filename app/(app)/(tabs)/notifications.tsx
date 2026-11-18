@@ -87,13 +87,8 @@ export default function NotificationsScreen() {
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Could not load board';
-      if (/relation .* does not exist|Could not find the table/i.test(msg)) {
-        setError(
-          'Run supabase/notifications_board.sql then notifications_targets.sql in Supabase.'
-        );
-      } else {
-        setError(msg);
-      }
+      setError(msg);
+      setItems([]);
     } finally {
       setLoading(false);
     }
@@ -166,6 +161,19 @@ export default function NotificationsScreen() {
 
       <Toast message={error} />
       <Toast message={ok} type="success" />
+
+      {error && /SMOKE_FIX_ALL|Notice board tables missing|schema cache|does not exist/i.test(error) ? (
+        <View className="mb-4 rounded-2xl bg-amber-50 p-4" style={{ borderWidth: 1, borderColor: '#F59E0B' }}>
+          <Text className="text-base font-bold text-maroon">Setup needed (1 minute)</Text>
+          <Text className="mt-2 text-sm text-slate-700">
+            Notice tables are not in Supabase yet. Open Supabase → SQL Editor → paste and Run:
+          </Text>
+          <Text className="mt-2 font-mono text-xs text-ink">supabase/SMOKE_FIX_ALL.sql</Text>
+          <Text className="mt-2 text-xs text-slate-500">
+            Then pull to refresh this screen. Other modules work; only the board needs this SQL.
+          </Text>
+        </View>
+      ) : null}
 
       {canPost ? (
         <SegmentStrip

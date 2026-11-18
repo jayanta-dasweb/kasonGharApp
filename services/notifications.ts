@@ -48,6 +48,23 @@ function matchesAudience(
   return roles.some((r) => r.toLowerCase() === a.toLowerCase());
 }
 
+export class NoticeBoardMissingError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'NoticeBoardMissingError';
+  }
+}
+
+function isMissingTable(err: { message?: string; code?: string } | null) {
+  const msg = err?.message ?? '';
+  return (
+    err?.code === '42P01' ||
+    /relation .* does not exist/i.test(msg) ||
+    /Could not find the table/i.test(msg) ||
+    /schema cache/i.test(msg)
+  );
+}
+
 export async function listNotificationsForUser(input: {
   userId: string;
   roles: string[];
@@ -58,7 +75,15 @@ export async function listNotificationsForUser(input: {
     .select('*')
     .order('created_at', { ascending: false })
     .limit(100);
-  if (error) throw error;
+
+  if (error) {
+    if (isMissingTable(error)) {
+      throw new NoticeBoardMissingError(
+        'Notice board tables missing. Run supabase/SMOKE_FIX_ALL.sql in Supabase SQL Editor, then reload.'
+      );
+    }
+    throw error;
+  }
 
   const rows = (data ?? []).filter((n: any) => {
     if (!input.includeInactive && !stillValid(n)) return false;
@@ -68,12 +93,14 @@ export async function listNotificationsForUser(input: {
   const ids = rows.map((r: any) => r.notification_id);
   let readSet = new Set<number>();
   if (ids.length) {
-    const { data: reads } = await supabase
+    const { data: reads, error: readErr } = await supabase
       .from('app_notification_reads')
       .select('notification_id')
       .eq('user_id', input.userId)
       .in('notification_id', ids);
-    readSet = new Set((reads ?? []).map((r: any) => Number(r.notification_id)));
+    if (!readErr) {
+      readSet = new Set((reads ?? []).map((r: any) => Number(r.notification_id)));
+    }
   }
 
   return rows.map((r: any) => ({

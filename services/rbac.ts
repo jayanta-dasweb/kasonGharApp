@@ -21,12 +21,22 @@ export async function ensurePermission(name: string) {
     .eq('name', name)
     .maybeSingle();
   if (existing) return existing;
+  const moduleName = name.includes('.') ? name.split('.')[0] : 'general';
+  const full = { name, guard_name: 'web', module: moduleName, description: name };
   const { data, error } = await supabase
     .from('permissions')
-    .insert({ name, guard_name: 'web' })
+    .insert(full)
     .select()
     .single();
-  if (error) throw error;
+  if (error) {
+    const { data: d2, error: e2 } = await supabase
+      .from('permissions')
+      .insert({ name, guard_name: 'web', module: moduleName })
+      .select()
+      .single();
+    if (e2) throw e2;
+    return d2;
+  }
   return data;
 }
 
