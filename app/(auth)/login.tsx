@@ -37,7 +37,7 @@ export default function LoginScreen() {
       >
         <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 32 }}>
           <View className="mb-10 items-center">
-            <KasonLogo size={110} />
+            <KasonLogo size={148} />
             <Text className="mt-4 text-center text-sm text-slate-500">
               Mekhela Chador ERP · Inventory · Accounts
             </Text>

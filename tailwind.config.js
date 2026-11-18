@@ -10,11 +10,15 @@ module.exports = {
           dark: '#1E3A5F',
           light: '#3B82F6',
         },
+        maroon: {
+          DEFAULT: '#6B1E2A',
+          soft: '#8B3A45',
+        },
         muga: {
           DEFAULT: '#D97706',
           soft: '#F59E0B',
         },
-        cream: '#FAFAF9',
+        cream: '#F7F1E8',
         ink: '#0F172A',
       },
     },

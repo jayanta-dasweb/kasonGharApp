@@ -6,11 +6,12 @@ import { useEffect } from 'react';
 import { AuthProvider } from '@/lib/auth';
 import { colors } from '@/constants/theme';
 
-SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 export default function RootLayout() {
   useEffect(() => {
-    SplashScreen.hideAsync();
+    // Hand off quickly to the animated in-app splash
+    SplashScreen.hideAsync().catch(() => undefined);
   }, []);
 
   return (
@@ -19,12 +20,13 @@ export default function RootLayout() {
       <Stack
         screenOptions={{
           headerStyle: { backgroundColor: colors.cream },
-          headerTintColor: colors.royal,
+          headerTintColor: colors.maroon,
           headerTitleStyle: { fontWeight: '700' },
           contentStyle: { backgroundColor: colors.cream },
+          animation: 'fade',
         }}
       >
-        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="index" options={{ headerShown: false, animation: 'none' }} />
         <Stack.Screen name="(auth)/login" options={{ headerShown: false }} />
         <Stack.Screen name="(app)" options={{ headerShown: false }} />
       </Stack>

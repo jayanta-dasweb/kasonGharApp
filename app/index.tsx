@@ -1,26 +1,19 @@
 import { Redirect } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
-import { KasonLogo } from '@/components/logo/KasonLogo';
-import { colors } from '@/constants/theme';
+import { useCallback, useState } from 'react';
+import { AnimatedSplash } from '@/components/splash/AnimatedSplash';
 import { useAuth } from '@/lib/auth';
 
 export default function SplashGate() {
   const { session, loading } = useAuth();
-  const [minSplashDone, setMinSplashDone] = useState(false);
+  const [splashDone, setSplashDone] = useState(false);
 
-  useEffect(() => {
-    const t = setTimeout(() => setMinSplashDone(true), 1200);
-    return () => clearTimeout(t);
+  const onSplashFinished = useCallback(() => {
+    setSplashDone(true);
   }, []);
 
-  if (loading || !minSplashDone) {
-    return (
-      <View className="flex-1 items-center justify-center bg-cream">
-        <KasonLogo size={140} />
-        <ActivityIndicator className="mt-8" color={colors.royal} size="large" />
-      </View>
-    );
+  // Keep splash visible until both animation and auth bootstrap finish
+  if (!splashDone || loading) {
+    return <AnimatedSplash onFinished={onSplashFinished} />;
   }
 
   if (session) return <Redirect href="/(app)/dashboard" />;

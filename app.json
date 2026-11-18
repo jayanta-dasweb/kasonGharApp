@@ -4,7 +4,7 @@
     "slug": "kasonghar-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/kason-ghar-logo.jpg",
     "scheme": "kasonghar",
     "userInterfaceStyle": "light",
     "ios": {
@@ -31,9 +31,9 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/kason-ghar-logo.jpg",
           "resizeMode": "contain",
-          "backgroundColor": "#FAFAF9"
+          "backgroundColor": "#F7F1E8"
         }
       ],
       "expo-secure-store"

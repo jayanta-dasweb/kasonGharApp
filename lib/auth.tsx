@@ -65,6 +65,21 @@ async function loadProfile(authUserId: string) {
     }
   }
 
+  // Super/admin short-circuit — skip 8 sequential RPCs
+  if (roles.includes('super_admin') || roles.includes('admin')) {
+    permissions.push(
+      'masters.manage',
+      'products.manage',
+      'inventory.manage',
+      'sales.reconcile',
+      'reports.export',
+      'users.manage',
+      'rbac.manage',
+      'audit.view'
+    );
+    return { profile, roles, permissions };
+  }
+
   const criticalPerms = [
     'masters.manage',
     'products.manage',
@@ -76,9 +91,14 @@ async function loadProfile(authUserId: string) {
     'audit.view',
   ];
 
-  for (const name of criticalPerms) {
-    const { data } = await supabase.rpc('has_permission', { name });
-    if (data) permissions.push(name);
+  const permResults = await Promise.all(
+    criticalPerms.map(async (name) => {
+      const { data } = await supabase.rpc('has_permission', { name });
+      return data ? name : null;
+    })
+  );
+  for (const name of permResults) {
+    if (name) permissions.push(name);
   }
 
   return { profile, roles, permissions };
