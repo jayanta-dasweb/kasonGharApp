@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/Input';
 import { NavRow } from '@/components/ui/NavRow';
 import { Screen } from '@/components/ui/Screen';
 import { SegmentStrip } from '@/components/ui/SegmentStrip';
+import { ToggleRow } from '@/components/ui/ToggleSwitch';
 import { Toast } from '@/components/ui/Toast';
 import { ROLE, ROLE_DESCRIPTIONS, ROLE_LABELS } from '@/constants/roles';
 import { colors } from '@/constants/theme';
@@ -121,7 +122,7 @@ export default function RbacScreen() {
   const selectedRole = roles.find((r) => r.id === roleId);
 
   return (
-    <Screen title="Users & Access" loading={loading}>
+    <Screen title="Users & Access" loading={loading} safeTop={false}>
       <Text className="mb-3 text-xs text-slate-500">
         Create staff here and pick a role. Roles are not in Masters.
       </Text>
@@ -280,30 +281,21 @@ export default function RbacScreen() {
                     ? roleNames.map((n) => ROLE_LABELS[n.toLowerCase()] ?? n).join(', ')
                     : 'NONE — assign below'}
                 </Text>
-                <Text
-                  className="mt-1 text-xs font-bold"
-                  style={{ color: active ? colors.success : colors.danger }}
-                >
-                  {u.status ?? 'ACTIVE'}
-                </Text>
-                <View className="mt-3 flex-row flex-wrap gap-2">
-                  <Pressable
-                    className="min-h-[48px] justify-center rounded-lg px-3 py-2"
-                    style={{ backgroundColor: active ? '#FEE2E2' : '#D1FAE5' }}
-                    onPress={async () => {
+                <View className="mt-3">
+                  <ToggleRow
+                    label={active ? 'Active' : 'Inactive'}
+                    hint={active ? 'ON · can login' : 'OFF · blocked from login'}
+                    value={active}
+                    onValueChange={async (on) => {
                       try {
-                        await setUserStatus(u.user_id, active ? 'INACTIVE' : 'ACTIVE');
-                        setOk(`${u.full_name} marked ${active ? 'INACTIVE' : 'ACTIVE'}`);
+                        await setUserStatus(u.user_id, on ? 'ACTIVE' : 'INACTIVE');
+                        setOk(`${u.full_name} marked ${on ? 'ACTIVE' : 'INACTIVE'}`);
                         await load();
                       } catch (e) {
                         setError(e instanceof Error ? e.message : 'Status update failed');
                       }
                     }}
-                  >
-                    <Text className="text-xs font-bold">
-                      {active ? 'Deactivate' : 'Activate'}
-                    </Text>
-                  </Pressable>
+                  />
                 </View>
                 <Text className="mb-2 mt-3 text-xs font-semibold text-slate-500">
                   Change role (tap one)
@@ -418,41 +410,44 @@ export default function RbacScreen() {
         </View>
       ) : null}
 
-      {tab === 'matrix'
-        ? roles.map((role) => (
+      {tab === 'matrix' ? (
+        <View>
+          <Text className="mb-3 text-sm text-slate-500">
+            Flip the switch to grant or revoke each permission. Green = ON.
+          </Text>
+          {roles.map((role) => (
             <View key={role.id} className="mb-4 rounded-2xl bg-white p-3">
               <Text className="mb-2 font-bold text-royal">
                 {ROLE_LABELS[String(role.name).toLowerCase()] ?? role.name}
               </Text>
+              {permissions.length === 0 ? (
+                <Text className="text-sm text-slate-500">No permissions seeded yet.</Text>
+              ) : null}
               {permissions.map((perm) => {
                 const on = hasLink(role.id, perm.id);
                 return (
-                  <Pressable
+                  <ToggleRow
                     key={perm.id}
-                    className="mb-1 min-h-[48px] flex-row items-center justify-between py-2"
-                    onPress={async () => {
+                    dense
+                    label={perm.name}
+                    hint={on ? 'Granted' : 'Not granted'}
+                    value={on}
+                    onValueChange={async (next) => {
                       try {
-                        await toggleRolePermission(role.id, perm.id, !on);
-                        setOk(`${perm.name} ${!on ? 'granted' : 'revoked'}`);
+                        await toggleRolePermission(role.id, perm.id, next);
+                        setOk(`${perm.name} ${next ? 'granted' : 'revoked'}`);
                         await load();
                       } catch (e) {
                         setError(e instanceof Error ? e.message : 'Toggle failed');
                       }
                     }}
-                  >
-                    <Text className="text-sm text-ink">{perm.name}</Text>
-                    <Text
-                      className="font-bold"
-                      style={{ color: on ? colors.success : colors.muted }}
-                    >
-                      {on ? 'ON' : 'OFF'}
-                    </Text>
-                  </Pressable>
+                  />
                 );
               })}
             </View>
-          ))
-        : null}
+          ))}
+        </View>
+      ) : null}
 
       {tab === 'audit'
         ? audits.map((a) => (

@@ -9,7 +9,6 @@ import {
   MapPin,
   Package,
   Pencil,
-  Power,
   Receipt,
   Save,
   Shirt,
@@ -22,6 +21,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { NavRow } from '@/components/ui/NavRow';
 import { Screen } from '@/components/ui/Screen';
+import { ToggleRow } from '@/components/ui/ToggleSwitch';
 import { Toast } from '@/components/ui/Toast';
 import { colors } from '@/constants/theme';
 import {
@@ -430,27 +430,29 @@ export default function MastersScreen() {
     ]);
   };
 
-  const toggleActive = async (item: any) => {
-    const next = item.is_active === false;
+  const toggleActive = async (item: any, nextActive: boolean) => {
     try {
-      if (tab === 'Categories') await setCategoryActive(item.id, next);
-      else if (tab === 'Fabrics') await setFabricActive(item.id, next);
-      else if (tab === 'Weaves') await setWeaveActive(item.id, next);
-      else if (tab === 'Partners') await setPartnerActive(item.id, next);
-      else if (tab === 'Products') await setProductActive(String(item.product_code ?? item.id), next);
-      else if (tab === 'Locations') await setLocationActive(item.id, next);
-      else if (tab === 'Accounts') await setAccountActive(item.id, next);
-      else if (tab === 'Journals') await setJournalActive(item.id, next);
-      else if (tab === 'Expenses') await setExpenseHeadActive(item.id, next);
-      else if (tab === 'FY') {
+      if (tab === 'FY') {
         await updateFinancialYear(item.id, {
           fy_name: item.fy_name,
           start_date: item.start_date,
           end_date: item.end_date,
-          is_closed: !item.is_closed,
+          is_closed: !nextActive,
         });
+        setOk(nextActive ? 'FY opened' : 'FY closed');
+      } else {
+        if (tab === 'Categories') await setCategoryActive(item.id, nextActive);
+        else if (tab === 'Fabrics') await setFabricActive(item.id, nextActive);
+        else if (tab === 'Weaves') await setWeaveActive(item.id, nextActive);
+        else if (tab === 'Partners') await setPartnerActive(item.id, nextActive);
+        else if (tab === 'Products')
+          await setProductActive(String(item.product_code ?? item.id), nextActive);
+        else if (tab === 'Locations') await setLocationActive(item.id, nextActive);
+        else if (tab === 'Accounts') await setAccountActive(item.id, nextActive);
+        else if (tab === 'Journals') await setJournalActive(item.id, nextActive);
+        else if (tab === 'Expenses') await setExpenseHeadActive(item.id, nextActive);
+        setOk(nextActive ? 'Activated' : 'Deactivated');
       }
-      setOk(next ? 'Activated' : 'Deactivated');
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Status update failed');
@@ -563,7 +565,7 @@ export default function MastersScreen() {
   };
 
   return (
-    <Screen title="Master Control" loading={loading}>
+    <Screen title="Master Control" loading={loading} safeTop={false}>
       <Text className="mb-2 text-sm text-slate-500">
         Full control: Create · Edit · Activate/Deactivate · Delete. Run erp_masters_enrichment.sql once for extra columns.
       </Text>
@@ -726,15 +728,15 @@ export default function MastersScreen() {
         />
       </View>
 
-      <View className="mb-2 flex-row items-center justify-between">
-        <Text className="text-base font-bold text-ink">
-          Records ({visibleItems.length}/{items.length})
-        </Text>
-        <ActionBtn
-          label={showInactive ? 'Hide inactive' : 'Show inactive'}
-          onPress={() => setShowInactive((v) => !v)}
-        />
-      </View>
+      <Text className="mb-2 text-base font-bold text-ink">
+        Records ({visibleItems.length}/{items.length})
+      </Text>
+      <ToggleRow
+        label="Show inactive"
+        hint={showInactive ? 'ON · inactive rows visible' : 'OFF · active only'}
+        value={showInactive}
+        onValueChange={setShowInactive}
+      />
 
       {visibleItems.length === 0 ? (
         <View className="rounded-2xl bg-white p-4">
@@ -744,6 +746,7 @@ export default function MastersScreen() {
       ) : (
         visibleItems.map((item, idx) => {
           const inactive = item.is_active === false || item.is_closed === true;
+          const active = tab === 'FY' ? !item.is_closed : item.is_active !== false;
           return (
             <View
               key={String(item.id ?? item.product_code ?? idx)}
@@ -754,15 +757,6 @@ export default function MastersScreen() {
                 {item.product_code ? `${item.product_code} · ` : ''}
                 {item.code ? `${item.code} · ` : ''}
                 {item.name}
-              </Text>
-              <Text className="mt-1 text-xs font-semibold" style={{ color: inactive ? colors.danger : colors.success }}>
-                {tab === 'FY'
-                  ? item.is_closed
-                    ? 'CLOSED'
-                    : 'OPEN'
-                  : inactive
-                    ? 'INACTIVE'
-                    : 'ACTIVE'}
               </Text>
               {item.company_mrp != null ? (
                 <Text className="text-xs text-slate-500">
@@ -776,22 +770,25 @@ export default function MastersScreen() {
                   {item.phone ? ` · ${item.phone}` : ''}
                 </Text>
               ) : null}
+              <View className="mt-2">
+                <ToggleRow
+                  dense
+                  label={tab === 'FY' ? (active ? 'FY open' : 'FY closed') : active ? 'Active' : 'Inactive'}
+                  hint={
+                    tab === 'FY'
+                      ? active
+                        ? 'ON · year open'
+                        : 'OFF · year closed'
+                      : active
+                        ? 'ON · usable'
+                        : 'OFF · hidden'
+                  }
+                  value={active}
+                  onValueChange={(next) => toggleActive(item, next)}
+                />
+              </View>
               <View className="flex-row flex-wrap">
                 <ActionBtn icon={Pencil} label="Edit" onPress={() => beginEdit(item)} />
-                {tab !== 'FY' ? (
-                  <ActionBtn
-                    icon={Power}
-                    label={item.is_active === false ? 'Activate' : 'Deactivate'}
-                    tone={item.is_active === false ? 'ok' : 'default'}
-                    onPress={() => toggleActive(item)}
-                  />
-                ) : (
-                  <ActionBtn
-                    icon={Power}
-                    label={item.is_closed ? 'Re-open FY' : 'Close FY'}
-                    onPress={() => toggleActive(item)}
-                  />
-                )}
                 <ActionBtn
                   icon={Trash2}
                   label="Delete"

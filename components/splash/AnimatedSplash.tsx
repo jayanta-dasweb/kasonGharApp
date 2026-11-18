@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import Constants from 'expo-constants';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -12,6 +13,18 @@ import { AssameseBrandName } from '@/components/brand/AssameseBrandName';
 import { KasonLogo } from '@/components/logo/KasonLogo';
 import { brand } from '@/constants/brand';
 import { colors } from '@/constants/theme';
+
+function appVersionLabel() {
+  const version =
+    Constants.expoConfig?.version ??
+    Constants.nativeAppVersion ??
+    '1.0.0';
+  const build =
+    Constants.expoConfig?.android?.versionCode ??
+    Constants.nativeBuildVersion ??
+    '';
+  return build ? `v${version} (${build})` : `v${version}`;
+}
 
 type Props = {
   onFinished?: () => void;
@@ -92,6 +105,7 @@ export function AnimatedSplash({ onFinished }: Props) {
       <Animated.View style={[styles.copy, titleStyle]}>
         <AssameseBrandName size={30} />
         <Text style={styles.tagline}>{brand.taglineEn}</Text>
+        <Text style={styles.version}>{appVersionLabel()}</Text>
         <Text style={styles.stamp}>{brand.bundleStamp}</Text>
       </Animated.View>
     </View>
@@ -132,8 +146,14 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
+  version: {
+    marginTop: 10,
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.maroon,
+  },
   stamp: {
-    marginTop: 8,
+    marginTop: 6,
     fontSize: 10,
     color: '#94A3B8',
   },

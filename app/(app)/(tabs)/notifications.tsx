@@ -1,31 +1,35 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, AppState, Pressable, Text, View } from 'react-native';
+import { AppState, Linking, Pressable, Text, View } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { useFocusEffect, router } from 'expo-router';
 import {
   Bell,
   CheckCheck,
+  Copy,
+  ExternalLink,
   Megaphone,
   PlusCircle,
-  Radio,
-  Trash2,
-  UserRound,
 } from 'lucide-react-native';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Screen } from '@/components/ui/Screen';
-import { SegmentStrip } from '@/components/ui/SegmentStrip';
+import { ToggleRow, ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { Toast } from '@/components/ui/Toast';
 import { brand } from '@/constants/brand';
+import {
+  NOTICE_BOARD_SETUP_SQL,
+  SUPABASE_SQL_EDITOR_URL,
+} from '@/constants/noticeBoardSql';
 import { NOTICE_PRESETS } from '@/constants/notificationPresets';
 import { colors } from '@/constants/theme';
 import { useAuth } from '@/lib/auth';
 import { listUsers } from '@/services/rbac';
 import {
   createNotification,
-  deactivateNotification,
   listNotificationsForUser,
   markAllRead,
   markNotificationRead,
+  setNotificationActive,
   type AppNotification,
   type NotificationAudience,
   type NotificationPriority,
@@ -162,28 +166,47 @@ export default function NotificationsScreen() {
       <Toast message={error} />
       <Toast message={ok} type="success" />
 
-      {error && /SMOKE_FIX_ALL|Notice board tables missing|schema cache|does not exist/i.test(error) ? (
-        <View className="mb-4 rounded-2xl bg-amber-50 p-4" style={{ borderWidth: 1, borderColor: '#F59E0B' }}>
-          <Text className="text-base font-bold text-maroon">Setup needed (1 minute)</Text>
+      {error &&
+      /SMOKE_FIX_ALL|Notice board tables missing|schema cache|does not exist|PGRST205|app_notifications/i.test(
+        error
+      ) ? (
+        <View
+          className="mb-4 rounded-2xl bg-amber-50 p-4"
+          style={{ borderWidth: 1, borderColor: '#F59E0B' }}
+        >
+          <Text className="text-base font-bold text-maroon">Notice table missing</Text>
           <Text className="mt-2 text-sm text-slate-700">
-            Notice tables are not in Supabase yet. Open Supabase → SQL Editor → paste and Run:
+            Run this once in Supabase SQL Editor, then pull to refresh.
           </Text>
-          <Text className="mt-2 font-mono text-xs text-ink">supabase/SMOKE_FIX_ALL.sql</Text>
-          <Text className="mt-2 text-xs text-slate-500">
-            Then pull to refresh this screen. Other modules work; only the board needs this SQL.
-          </Text>
+          <View className="mt-3 gap-2">
+            <Button
+              label="Copy SQL"
+              icon={Copy}
+              variant="secondary"
+              onPress={async () => {
+                await Clipboard.setStringAsync(NOTICE_BOARD_SETUP_SQL);
+                setOk('SQL copied — paste in Supabase → Run');
+              }}
+            />
+            <Button
+              label="Open SQL Editor"
+              icon={ExternalLink}
+              onPress={() => {
+                Linking.openURL(SUPABASE_SQL_EDITOR_URL).catch(() => {
+                  setError('Could not open browser. Paste SQL from supabase/SMOKE_FIX_ALL.sql');
+                });
+              }}
+            />
+          </View>
         </View>
       ) : null}
 
       {canPost ? (
-        <SegmentStrip
-          value={mode}
-          onChange={setMode}
-          equal
-          items={[
-            { key: 'inbox', label: 'Inbox', icon: Bell },
-            { key: 'compose', label: 'Send notice', icon: Megaphone },
-          ]}
+        <ToggleSwitch
+          value={mode === 'compose'}
+          onValueChange={(on) => setMode(on ? 'compose' : 'inbox')}
+          offLabel="Inbox"
+          onLabel="Send notice"
         />
       ) : null}
 
@@ -210,40 +233,32 @@ export default function NotificationsScreen() {
             ))}
           </View>
 
-          <Text className="mb-2 text-sm font-medium text-slate-600">Who receives?</Text>
-          <View className="mb-3 flex-row flex-wrap gap-2">
-            {(
-              [
-                ['ALL', 'Broadcast all', Radio],
-                ['salesperson', 'Sellers', UserRound],
-                ['admin', 'Admins', UserRound],
-                ['USERS', 'Specific people', UserRound],
-              ] as const
-            ).map(([key, label, Icon]) => (
-              <Pressable
-                key={key}
-                onPress={() => setAudience(key)}
-                className="min-h-[48px] flex-row items-center gap-2 rounded-xl px-3 py-2"
-                style={{
-                  backgroundColor: audience === key ? colors.royal : '#F1F5F9',
-                }}
-              >
-                <Icon color={audience === key ? '#fff' : colors.muted} size={18} />
-                <Text
-                  className="text-xs font-bold"
-                  style={{ color: audience === key ? '#fff' : colors.ink }}
-                >
-                  {label}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
+          <ToggleRow
+            label="Send to everyone"
+            hint={
+              audience === 'ALL'
+                ? 'ON · whole team gets this notice'
+                : 'OFF · pick people below'
+            }
+            value={audience === 'ALL'}
+            onValueChange={(on) => {
+              if (on) {
+                setAudience('ALL');
+                setSelectedUsers([]);
+              } else {
+                setAudience('USERS');
+              }
+            }}
+          />
 
-          {audience === 'USERS' ? (
+          {audience !== 'ALL' ? (
             <View className="mb-3">
               <Text className="mb-2 text-sm font-medium text-slate-600">
                 Tap users to select
               </Text>
+              {users.length === 0 ? (
+                <Text className="mb-2 text-sm text-slate-500">No active users found.</Text>
+              ) : null}
               {users.map((u) => {
                 const id = String(u.user_id);
                 const on = selectedUsers.includes(id);
@@ -401,30 +416,27 @@ export default function NotificationsScreen() {
                     {new Date(n.created_at).toLocaleString()}
                   </Text>
                   {canPost ? (
-                    <Pressable
-                      className="mt-2 min-h-[44px] flex-row items-center gap-2 self-start rounded-lg bg-red-50 px-3"
-                      onPress={() => {
-                        Alert.alert('Remove notice?', n.title, [
-                          { text: 'Cancel', style: 'cancel' },
-                          {
-                            text: 'Remove',
-                            style: 'destructive',
-                            onPress: async () => {
-                              try {
-                                await deactivateNotification(n.notification_id);
-                                setOk('Notice removed');
-                                await load();
-                              } catch (e) {
-                                setError(e instanceof Error ? e.message : 'Remove failed');
-                              }
-                            },
-                          },
-                        ]);
-                      }}
-                    >
-                      <Trash2 color="#B91C1C" size={16} />
-                      <Text className="text-xs font-bold text-red-700">Deactivate</Text>
-                    </Pressable>
+                    <View className="mt-2">
+                      <ToggleRow
+                        dense
+                        label={n.is_active === false ? 'Inactive' : 'Active'}
+                        hint={
+                          n.is_active === false
+                            ? 'OFF · hidden from inbox'
+                            : 'ON · visible on board'
+                        }
+                        value={n.is_active !== false}
+                        onValueChange={async (on) => {
+                          try {
+                            await setNotificationActive(n.notification_id, on);
+                            setOk(on ? 'Notice activated' : 'Notice deactivated');
+                            await load();
+                          } catch (e) {
+                            setError(e instanceof Error ? e.message : 'Update failed');
+                          }
+                        }}
+                      />
+                    </View>
                   ) : null}
                 </Pressable>
               );

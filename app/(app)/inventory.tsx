@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Screen } from '@/components/ui/Screen';
 import { SegmentStrip } from '@/components/ui/SegmentStrip';
+import { ToggleRow } from '@/components/ui/ToggleSwitch';
 import { Toast } from '@/components/ui/Toast';
 import { colors } from '@/constants/theme';
 import { formatINR, formatNumber } from '@/lib/format';
@@ -141,7 +142,7 @@ export default function InventoryScreen() {
   };
 
   return (
-    <Screen title="Inventory Control" loading={loading}>
+    <Screen title="Inventory Control" loading={loading} safeTop={false}>
       <Toast message={error} />
       <Toast message={ok} type="success" />
 
@@ -159,11 +160,12 @@ export default function InventoryScreen() {
 
       {mode === 'stock' ? (
         <View>
-          <Pressable className="mb-3" onPress={() => setHideZero((v) => !v)}>
-            <Text className="text-xs font-semibold text-maroon">
-              {hideZero ? 'Showing qty > 0 · tap to show all' : 'Showing all · tap to hide zeros'}
-            </Text>
-          </Pressable>
+          <ToggleRow
+            label="Hide zero stock"
+            hint={hideZero ? 'ON · only qty > 0' : 'OFF · show all rows'}
+            value={hideZero}
+            onValueChange={setHideZero}
+          />
           {quants
             .filter((q) => !hideZero || Number(q.quantity ?? 0) > 0)
             .map((q, idx) => (

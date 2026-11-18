@@ -21,7 +21,7 @@ export default function ProfileScreen() {
   const canChangePassword = hasPermission('profile.password');
 
   return (
-    <Screen title="My Profile">
+    <Screen title="My Profile" safeTop={false}>
       <Toast message={error} />
       <Toast message={ok} type="success" />
 

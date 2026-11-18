@@ -12,10 +12,8 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerStyle: { backgroundColor: colors.cream },
-        headerTintColor: colors.maroon,
-        headerTitleStyle: { fontWeight: '700', color: colors.maroon },
-        headerShadowVisible: false,
+        // Screen component owns the page title — avoid double headers
+        headerShown: false,
         tabBarActiveTintColor: colors.maroon,
         tabBarInactiveTintColor: colors.muted,
         tabBarLabelStyle: { fontSize: 12, fontWeight: '700', marginBottom: 2 },

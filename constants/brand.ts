@@ -19,5 +19,5 @@ export const brand = {
   loginSubtitleEn: 'Mekhela Chador ERP · Inventory · Accounts',
   a11yLogo: `${NAME_AS} — Traditional Assamese Weaves`,
   /** Bump when forcing clients off stale Expo Go cache */
-  bundleStamp: 'as-fix-2026-03-18b',
+  bundleStamp: 'as-fix-2026-03-18c',
 } as const;

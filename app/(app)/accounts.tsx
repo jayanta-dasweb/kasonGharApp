@@ -86,7 +86,7 @@ export default function AccountsScreen() {
   };
 
   return (
-    <Screen title="Accounts Ledger" loading={loading}>
+    <Screen title="Accounts Ledger" loading={loading} safeTop={false}>
       <Toast message={error} />
       <Toast message={ok} type="success" />
 

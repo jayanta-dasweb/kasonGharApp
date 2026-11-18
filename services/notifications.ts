@@ -233,15 +233,19 @@ export async function notifySpecificUsers(input: {
   });
 }
 
-export async function deactivateNotification(notificationId: number) {
+export async function setNotificationActive(notificationId: number, isActive: boolean) {
   const { data, error } = await supabase
     .from('app_notifications')
-    .update({ is_active: false, updated_at: new Date().toISOString() })
+    .update({ is_active: isActive, updated_at: new Date().toISOString() })
     .eq('notification_id', notificationId)
     .select()
     .single();
   if (error) throw error;
   return data;
+}
+
+export async function deactivateNotification(notificationId: number) {
+  return setNotificationActive(notificationId, false);
 }
 
 export async function deleteNotification(notificationId: number) {

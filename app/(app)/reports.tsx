@@ -79,7 +79,7 @@ export default function ReportsScreen() {
   );
 
   return (
-    <Screen title="Reports & Control" loading={loading}>
+    <Screen title="Reports & Control" loading={loading} safeTop={false}>
       <Toast message={error} />
 
       <View className="mb-3 rounded-2xl bg-white p-4">

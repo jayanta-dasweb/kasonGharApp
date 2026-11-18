@@ -6,6 +6,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@/constants/theme';
 
 type Props = {
@@ -15,6 +16,8 @@ type Props = {
   onRefresh?: () => void;
   refreshing?: boolean;
   right?: ReactNode;
+  /** When false, skip top inset (use under a native stack header). Default true. */
+  safeTop?: boolean;
 };
 
 export function Screen({
@@ -24,9 +27,14 @@ export function Screen({
   onRefresh,
   refreshing,
   right,
+  safeTop = true,
 }: Props) {
+  const insets = useSafeAreaInsets();
   return (
-    <View className="flex-1 bg-cream">
+    <View
+      className="flex-1 bg-cream"
+      style={{ paddingTop: safeTop ? insets.top : 0 }}
+    >
       {title ? (
         <View className="flex-row items-center justify-between px-4 pb-2 pt-2">
           <Text className="text-2xl font-bold" style={{ color: colors.maroon }}>

@@ -20,7 +20,7 @@ export function KasonLogo({ size = 180 }: Props) {
       }}
     >
       <Image
-        source={require('../../assets/images/kason-ghar-logo.jpg')}
+        source={require('../../assets/images/kason-ghar-logo.png')}
         style={{ width: size, height: size }}
         resizeMode="cover"
         accessibilityLabel={brand.a11yLogo}
