@@ -26,7 +26,7 @@ type Item = {
 };
 
 export function AppDrawerContent(props: DrawerContentComponentProps) {
-  const { profile, roles, isAdmin, hasPermission, signOut } = useAuth();
+  const { profile, roles, isAdmin, isSuperAdmin, hasPermission, signOut } = useAuth();
 
   const items: Item[] = [
     { label: 'Dashboard', href: '/(app)/dashboard', icon: LayoutDashboard, show: true },
@@ -59,11 +59,7 @@ export function AppDrawerContent(props: DrawerContentComponentProps) {
       label: 'Users & Access',
       href: '/(app)/rbac',
       icon: Shield,
-      show:
-        isAdmin ||
-        hasPermission('users.manage') ||
-        hasPermission('rbac.manage') ||
-        hasPermission('audit.view'),
+      show: isSuperAdmin || hasPermission('rbac.manage') || hasPermission('users.manage'),
     },
   ];
 

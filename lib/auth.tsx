@@ -7,6 +7,12 @@ import React, {
   useState,
 } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
+import {
+  ALL_PERMS,
+  OPS_PERMS,
+  ROLE,
+  SECURITY_PERMS,
+} from '@/constants/roles';
 import { phoneToAuthEmail } from '@/lib/format';
 import { supabase } from '@/lib/supabase';
 import type { UserMaster } from '@/types/database';
@@ -18,7 +24,11 @@ type AuthContextValue = {
   roles: string[];
   permissions: string[];
   loading: boolean;
+  /** Ops admin OR super admin */
   isAdmin: boolean;
+  /** Security access — Users & Access */
+  isSuperAdmin: boolean;
+  isSalesperson: boolean;
   signInWithPhone: (phone: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   hasPermission: (name: string) => boolean;
@@ -28,20 +38,11 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-const CRITICAL_PERMS = [
-  'masters.manage',
-  'products.manage',
-  'inventory.manage',
-  'sales.reconcile',
-  'reports.export',
-  'users.manage',
-  'rbac.manage',
-  'audit.view',
-  'users.view',
-] as const;
+function normalizeRole(name: string) {
+  return name.trim().toLowerCase().replace(/\s+/g, '_');
+}
 
 async function loadProfile(authUserId: string) {
-  // Live schema: users_master.user_id == auth.users.id
   const { data: profile, error } = await supabase
     .from('users_master')
     .select('*')
@@ -54,13 +55,17 @@ async function loadProfile(authUserId: string) {
   const permissions: string[] = [];
 
   const { data: isSuper } = await supabase.rpc('has_role', {
-    role_name: 'super_admin',
+    role_name: ROLE.SUPER_ADMIN,
   });
   const { data: isAdminRole } = await supabase.rpc('has_role', {
-    role_name: 'admin',
+    role_name: ROLE.ADMIN,
   });
-  if (isSuper) roles.push('super_admin');
-  if (isAdminRole) roles.push('admin');
+  const { data: isSales } = await supabase.rpc('has_role', {
+    role_name: ROLE.SALESPERSON,
+  });
+  if (isSuper) roles.push(ROLE.SUPER_ADMIN);
+  if (isAdminRole) roles.push(ROLE.ADMIN);
+  if (isSales) roles.push(ROLE.SALESPERSON);
 
   if (profile?.user_id) {
     const { data: modelRoles } = await supabase
@@ -75,34 +80,41 @@ async function loadProfile(authUserId: string) {
         .select('name')
         .in('id', roleIds);
       for (const r of roleRows ?? []) {
-        if (r.name && !roles.includes(r.name)) roles.push(r.name);
+        const n = normalizeRole(String(r.name ?? ''));
+        if (n && !roles.includes(n)) roles.push(n);
       }
     }
   }
 
-  if (roles.includes('super_admin') || roles.includes('admin')) {
-    permissions.push(...CRITICAL_PERMS);
+  const isSuperAdmin = roles.includes(ROLE.SUPER_ADMIN);
+  const isOpsAdmin = roles.includes(ROLE.ADMIN);
+
+  // Built-in grants (works even before SQL seed is fully applied)
+  if (isSuperAdmin) {
+    permissions.push(...ALL_PERMS);
+    return { profile, roles, permissions };
+  }
+  if (isOpsAdmin) {
+    permissions.push(...OPS_PERMS);
     return { profile, roles, permissions };
   }
 
-  // Prefer has_permission(permission_name) if present; fall back to Spatie join
+  // Salesperson / others — RPC then Spatie join
   const permResults = await Promise.all(
-    CRITICAL_PERMS.map(async (perm_name) => {
-      const { data, error } = await supabase.rpc('has_permission', {
+    ALL_PERMS.map(async (perm_name) => {
+      const { data, error: rpcErr } = await supabase.rpc('has_permission', {
         perm_name,
       });
-      if (!error && data) return perm_name;
+      if (!rpcErr && data) return perm_name;
       return null;
     })
   );
-
   const fromRpc = permResults.filter(Boolean) as string[];
   if (fromRpc.length) {
     permissions.push(...fromRpc);
     return { profile, roles, permissions };
   }
 
-  // Fallback: role_has_permissions for assigned roles
   const { data: modelRoles } = await supabase
     .from('model_has_roles')
     .select('role_id')
@@ -123,6 +135,19 @@ async function loadProfile(authUserId: string) {
         if (p.name) permissions.push(p.name);
       }
     }
+  }
+
+  // Sensible salesperson defaults if matrix empty
+  if (roles.includes(ROLE.SALESPERSON) && permissions.length === 0) {
+    permissions.push(
+      'catalog.view',
+      'products.update_assigned',
+      'sales.own',
+      'sales.reconcile',
+      'reports.own',
+      'notifications.view',
+      'profile.password'
+    );
   }
 
   return { profile, roles, permissions };
@@ -188,15 +213,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (session?.user) await hydrate(session);
   }, [hydrate, session]);
 
+  const isSuperAdmin = roles.includes(ROLE.SUPER_ADMIN);
+  const isAdmin =
+    isSuperAdmin ||
+    roles.includes(ROLE.ADMIN) ||
+    roles.some((r) => ['super_admin', 'admin'].includes(normalizeRole(r)));
+  const isSalesperson = roles.includes(ROLE.SALESPERSON);
+
   const hasPermission = useCallback(
-    (name: string) => permissions.includes(name) || roles.includes('super_admin'),
-    [permissions, roles]
+    (name: string) => {
+      if (isSuperAdmin) return true;
+      if (SECURITY_PERMS.includes(name as (typeof SECURITY_PERMS)[number])) {
+        return false; // only super_admin (handled above)
+      }
+      return permissions.includes(name);
+    },
+    [isSuperAdmin, permissions]
   );
 
-  const hasRole = useCallback((name: string) => roles.includes(name), [roles]);
-
-  const isAdmin = roles.some((r) =>
-    ['super_admin', 'admin', 'Super Admin', 'Admin'].includes(r)
+  const hasRole = useCallback(
+    (name: string) => roles.map(normalizeRole).includes(normalizeRole(name)),
+    [roles]
   );
 
   const value = useMemo(
@@ -208,6 +245,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       permissions,
       loading,
       isAdmin,
+      isSuperAdmin,
+      isSalesperson,
       signInWithPhone,
       signOut,
       hasPermission,
@@ -221,6 +260,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       permissions,
       loading,
       isAdmin,
+      isSuperAdmin,
+      isSalesperson,
       signInWithPhone,
       signOut,
       hasPermission,

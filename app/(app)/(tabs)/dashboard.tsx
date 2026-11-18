@@ -17,6 +17,7 @@ import {
   Shield,
   TrendingUp,
   Truck,
+  UserRound,
   Wallet,
 } from 'lucide-react-native';
 import { KpiCard } from '@/components/ui/Card';
@@ -41,7 +42,7 @@ import { fetchReport, getKpiTotals } from '@/services/reports';
 type Period = 'day' | 'month' | 'fy';
 
 export default function DashboardScreen() {
-  const { profile, isAdmin, roles, hasPermission } = useAuth();
+  const { profile, isAdmin, isSuperAdmin, roles, hasPermission } = useAuth();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -185,15 +186,23 @@ export default function DashboardScreen() {
       href: '/(app)/reports',
       icon: FileBarChart2,
       color: colors.royal,
-      show: admin || hasPermission('reports.export'),
+      show: admin || hasPermission('reports.export') || hasPermission('reports.own'),
     },
     {
       label: 'Users & Access',
-      subtitle: 'Staff and permissions',
+      subtitle: 'Roles & security — Super Admin only',
       href: '/(app)/rbac',
       icon: Shield,
       color: '#475569',
-      show: admin || hasPermission('users.manage') || hasPermission('rbac.manage'),
+      show: isSuperAdmin || hasPermission('rbac.manage') || hasPermission('users.manage'),
+    },
+    {
+      label: 'My Profile',
+      subtitle: 'Change password',
+      href: '/(app)/profile',
+      icon: UserRound,
+      color: colors.maroon,
+      show: true,
     },
   ].filter((r) => r.show);
 

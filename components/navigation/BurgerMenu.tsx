@@ -38,7 +38,7 @@ type Item = {
 export function BurgerButton() {
   const [open, setOpen] = useState(false);
   const insets = useSafeAreaInsets();
-  const { profile, roles, isAdmin, hasPermission, signOut } = useAuth();
+  const { profile, roles, isAdmin, isSuperAdmin, hasPermission, signOut } = useAuth();
 
   const items: Item[] = [
     {
@@ -106,11 +106,7 @@ export function BurgerButton() {
       href: '/(app)/rbac',
       icon: Shield,
       color: '#475569',
-      show:
-        isAdmin ||
-        hasPermission('users.manage') ||
-        hasPermission('rbac.manage') ||
-        hasPermission('audit.view'),
+      show: isSuperAdmin || hasPermission('rbac.manage') || hasPermission('users.manage'),
     },
   ];
 

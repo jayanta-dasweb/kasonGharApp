@@ -1,5 +1,94 @@
+import { ALL_PERMS, ROLE, ROLE_DESCRIPTIONS } from '@/constants/roles';
 import { phoneToAuthEmail } from '@/lib/format';
 import { supabase } from '@/lib/supabase';
+
+export async function createRole(name: string) {
+  const clean = name.trim().toLowerCase().replace(/\s+/g, '_');
+  if (!clean) throw new Error('Role name required');
+  const { data, error } = await supabase
+    .from('roles')
+    .insert({ name: clean, guard_name: 'web' })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function ensurePermission(name: string) {
+  const { data: existing } = await supabase
+    .from('permissions')
+    .select('*')
+    .eq('name', name)
+    .maybeSingle();
+  if (existing) return existing;
+  const { data, error } = await supabase
+    .from('permissions')
+    .insert({ name, guard_name: 'web' })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+/** Creates the 3 system roles + permission matrix from the app (if SQL not run). */
+export async function seedDefaultRoles() {
+  const roleNames = [ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.SALESPERSON] as const;
+  const roleIds: Record<string, number> = {};
+
+  for (const name of roleNames) {
+    const { data: existing } = await supabase
+      .from('roles')
+      .select('*')
+      .eq('name', name)
+      .maybeSingle();
+    if (existing) {
+      roleIds[name] = existing.id;
+    } else {
+      const created = await createRole(name);
+      roleIds[name] = created.id;
+    }
+  }
+
+  const permIds: Record<string, number> = {};
+  for (const name of ALL_PERMS) {
+    const p = await ensurePermission(name);
+    permIds[name] = p.id;
+  }
+
+  const matrix: Record<string, readonly string[]> = {
+    [ROLE.SUPER_ADMIN]: ALL_PERMS,
+    [ROLE.ADMIN]: ALL_PERMS.filter(
+      (p) => !['users.view', 'users.manage', 'rbac.manage', 'audit.view'].includes(p)
+    ),
+    [ROLE.SALESPERSON]: [
+      'catalog.view',
+      'products.update_assigned',
+      'sales.own',
+      'sales.reconcile',
+      'reports.own',
+      'notifications.view',
+      'profile.password',
+    ],
+  };
+
+  for (const [roleName, perms] of Object.entries(matrix)) {
+    const rid = roleIds[roleName];
+    await supabase.from('role_has_permissions').delete().eq('role_id', rid);
+    const rows = perms.map((pname) => ({
+      role_id: rid,
+      permission_id: permIds[pname],
+    }));
+    if (rows.length) {
+      const { error } = await supabase.from('role_has_permissions').insert(rows);
+      if (error) throw error;
+    }
+  }
+
+  return {
+    roles: roleIds,
+    descriptions: ROLE_DESCRIPTIONS,
+  };
+}
 
 export async function listUsers() {
   const { data, error } = await supabase

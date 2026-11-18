@@ -32,6 +32,7 @@ export default function AppLayout() {
       <Stack.Screen name="accounts" options={{ title: 'Accounts' }} />
       <Stack.Screen name="reports" options={{ title: 'Reports' }} />
       <Stack.Screen name="rbac" options={{ title: 'Users & Access' }} />
+      <Stack.Screen name="profile" options={{ title: 'My Profile' }} />
     </Stack>
   );
 }
