@@ -36,7 +36,6 @@ import {
   rememberNoticeIdentity,
   syncNoticesInBackground,
 } from '@/services/notificationSync';
-import { registerNoticeBackgroundTask } from '@/services/backgroundNotices';
 
 type Mode = 'inbox' | 'compose';
 
@@ -103,7 +102,9 @@ export default function NotificationsScreen() {
 
   useEffect(() => {
     ensureLocalNotificationPermission().catch(() => undefined);
-    registerNoticeBackgroundTask().catch(() => undefined);
+    import('@/services/backgroundNotices')
+      .then((m) => m.registerNoticeBackgroundTask())
+      .catch(() => undefined);
 
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
@@ -111,7 +112,6 @@ export default function NotificationsScreen() {
       }
     });
 
-    // Soft poll while app open (free — no paid push)
     const timer = setInterval(() => {
       syncNoticesInBackground().then((r) => {
         if (r === 'new') load();

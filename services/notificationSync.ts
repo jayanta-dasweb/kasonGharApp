@@ -1,5 +1,4 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
 
@@ -7,14 +6,35 @@ const LAST_SEEN_KEY = 'kg_notice_last_seen_id';
 const USER_ID_KEY = 'kg_notice_user_id';
 const ROLES_KEY = 'kg_notice_roles';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
+type NotificationsModule = typeof import('expo-notifications');
+
+let notificationsMod: NotificationsModule | null | undefined;
+
+/** Lazy-load; Expo Go may not include ExpoApplication / notifications native code. */
+async function getNotifications(): Promise<NotificationsModule | null> {
+  if (notificationsMod !== undefined) return notificationsMod;
+  if (Platform.OS === 'web') {
+    notificationsMod = null;
+    return null;
+  }
+  try {
+    const mod = await import('expo-notifications');
+    mod.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowBanner: true,
+        shouldShowList: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+      }),
+    });
+    notificationsMod = mod;
+    return mod;
+  } catch (e) {
+    console.warn('[notice] expo-notifications unavailable (Expo Go / missing native)', e);
+    notificationsMod = null;
+    return null;
+  }
+}
 
 export async function rememberNoticeIdentity(userId: string, roles: string[]) {
   await AsyncStorage.multiSet([
@@ -24,14 +44,21 @@ export async function rememberNoticeIdentity(userId: string, roles: string[]) {
 }
 
 export async function ensureLocalNotificationPermission() {
-  if (Platform.OS === 'web') return false;
-  const current = await Notifications.getPermissionsAsync();
-  if (current.granted) return true;
-  const req = await Notifications.requestPermissionsAsync();
-  return req.granted;
+  const Notifications = await getNotifications();
+  if (!Notifications) return false;
+  try {
+    const current = await Notifications.getPermissionsAsync();
+    if (current.granted) return true;
+    const req = await Notifications.requestPermissionsAsync();
+    return req.granted;
+  } catch {
+    return false;
+  }
 }
 
 async function showLocalAlert(title: string, body: string) {
+  const Notifications = await getNotifications();
+  if (!Notifications) return;
   try {
     await Notifications.scheduleNotificationAsync({
       content: {
@@ -40,7 +67,7 @@ async function showLocalAlert(title: string, body: string) {
         sound: true,
         data: { source: 'kason-notice-board' },
       },
-      trigger: null, // immediate local (free — no paid push)
+      trigger: null,
     });
   } catch (e) {
     console.warn('[notice] local alert failed', e);
@@ -48,8 +75,8 @@ async function showLocalAlert(title: string, body: string) {
 }
 
 /**
- * Free background sync: pull new notices from Supabase and fire local alerts.
- * No Expo Push / FCM subscription required.
+ * Free sync: pull new notices from Supabase.
+ * Local tray alerts only when native notifications module exists.
  */
 export async function syncNoticesInBackground(): Promise<'new' | 'none' | 'fail'> {
   try {
@@ -81,7 +108,6 @@ export async function syncNoticesInBackground(): Promise<'new' | 'none' | 'fail'
 
     if (!fresh.length) return 'none';
 
-    // Alert for newest first (max 3 to avoid spam)
     for (const n of fresh.slice(0, 3).reverse()) {
       if (n.send_local_alert === false) continue;
       await showLocalAlert(String(n.title), String(n.body));
