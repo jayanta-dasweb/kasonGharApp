@@ -1,6 +1,13 @@
 import { Redirect } from 'expo-router';
-import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
+import { useRef, useState } from 'react';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Text,
+  View,
+  type ScrollView as ScrollViewType,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { KasonLogo } from '@/components/logo/KasonLogo';
 import { Button } from '@/components/ui/Button';
@@ -14,6 +21,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const scrollRef = useRef<ScrollViewType>(null);
 
   if (session) return <Redirect href="/(app)/dashboard" />;
 
@@ -29,16 +37,36 @@ export default function LoginScreen() {
     }
   };
 
+  const scrollFieldIntoView = () => {
+    // Give keyboard time to open, then scroll form into view
+    setTimeout(() => {
+      scrollRef.current?.scrollToEnd({ animated: true });
+    }, 150);
+  };
+
   return (
-    <SafeAreaView className="flex-1 bg-cream">
+    <SafeAreaView className="flex-1 bg-cream" edges={['top', 'bottom']}>
       <KeyboardAvoidingView
         className="flex-1"
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
       >
-        <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 32 }}>
-          <View className="mb-10 items-center">
-            <KasonLogo size={148} />
-            <Text className="mt-4 text-center text-sm text-slate-500">
+        <ScrollView
+          ref={scrollRef}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{
+            flexGrow: 1,
+            justifyContent: 'center',
+            paddingHorizontal: 24,
+            paddingTop: 24,
+            paddingBottom: 48,
+          }}
+        >
+          <View className="mb-8 items-center">
+            <KasonLogo size={132} />
+            <Text className="mt-3 text-center text-sm text-slate-500">
               Mekhela Chador ERP · Inventory · Accounts
             </Text>
           </View>
@@ -51,6 +79,7 @@ export default function LoginScreen() {
             onChangeText={setPhone}
             placeholder="10-digit mobile"
             keyboardType="phone-pad"
+            onFocus={scrollFieldIntoView}
           />
           <Input
             label="Password"
@@ -58,9 +87,12 @@ export default function LoginScreen() {
             onChangeText={setPassword}
             placeholder="Password"
             secureTextEntry
+            onFocus={scrollFieldIntoView}
           />
 
-          <Button label="Sign In" onPress={onSubmit} loading={loading} />
+          <View className="mt-2">
+            <Button label="Sign In" onPress={onSubmit} loading={loading} />
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
