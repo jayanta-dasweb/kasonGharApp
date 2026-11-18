@@ -49,7 +49,7 @@ export function BurgerButton() {
       show: true,
     },
     {
-      label: 'জাননী বোৰ্ড',
+      label: 'Notice Board',
       href: '/(app)/notifications',
       icon: Bell,
       color: colors.muga,
@@ -163,7 +163,7 @@ export function BurgerButton() {
                   {profile?.full_name ?? brand.nameAs}
                 </Text>
                 <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12 }}>
-                  {brand.nameAs} · {profile?.phone}
+                  {brand.nameEn} · {profile?.phone}
                 </Text>
                 <Text style={{ color: colors.mugaSoft, fontSize: 11, marginTop: 2 }}>
                   {(roles[0] ?? 'user').replace('_', ' ').toUpperCase()}

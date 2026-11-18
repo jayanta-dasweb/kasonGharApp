@@ -90,7 +90,8 @@ export function AnimatedSplash({ onFinished }: Props) {
 
       <Animated.View style={[styles.copy, titleStyle]}>
         <Text style={styles.brandAssamese}>{brand.nameAs}</Text>
-        <Text style={styles.tagline}>{brand.taglineAs}</Text>
+        <Text style={styles.brandEn}>{brand.nameEn}</Text>
+        <Text style={styles.tagline}>{brand.taglineEn}</Text>
       </Animated.View>
     </View>
   );
@@ -126,14 +127,20 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '700',
     color: colors.maroon,
-    letterSpacing: 1,
+    letterSpacing: 0, // letterSpacing breaks Assamese matras (া)
+  },
+  brandEn: {
+    marginTop: 4,
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.maroonSoft,
   },
   tagline: {
     marginTop: 6,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: colors.maroonSoft,
-    letterSpacing: 1.4,
+    letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
 });

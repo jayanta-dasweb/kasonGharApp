@@ -41,7 +41,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="notifications"
         options={{
-          title: 'জাননী বোৰ্ড',
+          title: 'Notice Board',
           tabBarLabel: 'Notices',
           tabBarIcon: ({ color, size }) => <Bell color={color} size={size ?? 26} />,
         }}

@@ -1,13 +1,16 @@
-/** Assamese brand copy — never use Hindi/Devanagari for this product. */
+/**
+ * Assamese ONLY for brand name + greeting.
+ * কাছন ঘৰ = KA (ক+া) + ছন + ঘৰ — built from Unicode so fonts/matras do not drop.
+ */
+const NAME_AS =
+  '\u0995\u09BE\u099B\u09A8 \u0998\u09F0'; // কাছন ঘৰ
+
 export const brand = {
   nameEn: 'Kason Ghar',
-  // কা + ছন = KAson (আ matra) — not কছন (reads like KOson)
-  nameAs: 'কাছন ঘৰ',
-  taglineAs: 'পৰম্পৰাগত অসমীয়া বয়ন',
+  nameAs: NAME_AS,
   taglineEn: 'Traditional Assamese Weaves',
-  productAs: 'মেখেলা চাদৰ',
   productEn: 'Mekhela Chador',
-  welcomeAs: 'স্বাগতম',
-  loginSubtitleAs: 'মেখেলা চাদৰ · মজুত · হিচাপ',
-  a11yLogo: 'কাছন ঘৰ — পৰম্পৰাগত অসমীয়া বয়ন',
+  welcomeAs: '\u09B8\u09CD\u09AC\u09BE\u0997\u09A4\u09AE', // স্বাগতম
+  loginSubtitleEn: 'Mekhela Chador ERP · Inventory · Accounts',
+  a11yLogo: `${NAME_AS} — Traditional Assamese Weaves`,
 } as const;

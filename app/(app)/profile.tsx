@@ -28,7 +28,7 @@ export default function ProfileScreen() {
       <View className="mb-4 rounded-2xl bg-white p-4">
         <Text className="text-lg font-bold text-maroon">{profile?.full_name}</Text>
         <Text className="mt-1 text-sm text-slate-500">
-          {brand.nameAs} · {profile?.phone}
+          {brand.nameEn} · {profile?.phone}
         </Text>
         <Text className="mt-2 text-xs text-slate-500">
           Role: {roles.map((r) => ROLE_LABELS[r] ?? r).join(', ') || '—'}

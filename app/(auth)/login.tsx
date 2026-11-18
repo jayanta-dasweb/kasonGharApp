@@ -68,14 +68,17 @@ export default function LoginScreen() {
         >
           <View className="mb-8 items-center">
             <KasonLogo size={132} />
-            <Text className="mt-3 text-center text-2xl font-bold text-maroon">
+            <Text
+              className="mt-3 text-center text-2xl font-bold text-maroon"
+              style={{ letterSpacing: 0 }}
+            >
               {brand.nameAs}
             </Text>
-            <Text className="mt-1 text-center text-sm text-slate-500">
-              {brand.loginSubtitleAs}
+            <Text className="mt-1 text-center text-sm font-semibold text-slate-600">
+              {brand.nameEn}
             </Text>
             <Text className="mt-1 text-center text-xs text-slate-400">
-              {brand.productEn} ERP · Inventory · Accounts
+              {brand.loginSubtitleEn}
             </Text>
           </View>
 

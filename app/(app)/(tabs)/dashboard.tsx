@@ -132,7 +132,7 @@ export default function DashboardScreen() {
 
   const quickLinks = [
     {
-      label: 'জাননী বোৰ্ড / Notices',
+      label: 'Notice Board',
       subtitle: unreadNotices > 0 ? `${unreadNotices} new` : 'Open notice board',
       href: '/(app)/(tabs)/notifications',
       icon: Bell,
@@ -217,11 +217,14 @@ export default function DashboardScreen() {
       }}
     >
       <View className="mb-4">
-        <Text className="text-2xl font-bold text-maroon">
+        <Text className="text-2xl font-bold text-maroon" style={{ letterSpacing: 0 }}>
           {brand.welcomeAs}, {profile?.full_name?.split(' ')[0] ?? 'User'}
         </Text>
-        <Text className="mt-1 text-sm text-slate-500">
-          {brand.nameAs} · {profile?.phone} · {(roles[0] ?? 'staff').replace('_', ' ')}
+        <Text className="mt-1 text-sm text-slate-500" style={{ letterSpacing: 0 }}>
+          {brand.nameAs} · {brand.nameEn}
+        </Text>
+        <Text className="mt-0.5 text-xs text-slate-400">
+          {profile?.phone} · {(roles[0] ?? 'staff').replace('_', ' ')}
         </Text>
       </View>
 

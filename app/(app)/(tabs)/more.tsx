@@ -74,7 +74,7 @@ export default function MoreScreen() {
   return (
     <Screen title="More">
       <Text className="mb-3 text-sm text-slate-500">
-        {brand.nameAs} · tap a big row to open
+        {brand.nameEn} · tap a big row to open
       </Text>
       {rows.length === 0 ? (
         <View className="rounded-2xl bg-white p-4">

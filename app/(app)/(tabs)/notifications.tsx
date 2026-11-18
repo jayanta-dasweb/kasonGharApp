@@ -147,7 +147,7 @@ export default function NotificationsScreen() {
 
   return (
     <Screen
-      title="জাননী বোৰ্ড"
+      title="Notice Board"
       loading={loading}
       onRefresh={() => {
         setLoading(true);
@@ -156,7 +156,7 @@ export default function NotificationsScreen() {
       refreshing={loading}
     >
       <Text className="mb-2 text-xs text-slate-500">
-        {brand.nameAs} · free in-app + background local alerts (no paid push)
+        {brand.nameEn} · free in-app notices
       </Text>
 
       <Toast message={error} />
