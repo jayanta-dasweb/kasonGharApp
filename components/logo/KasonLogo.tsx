@@ -1,10 +1,11 @@
 import { Image, View } from 'react-native';
+import { brand } from '@/constants/brand';
 
 type Props = {
   size?: number;
 };
 
-/** Official Kason Ghar circular brand mark */
+/** Official কছন ঘৰ circular brand mark */
 export function KasonLogo({ size = 180 }: Props) {
   return (
     <View
@@ -22,7 +23,7 @@ export function KasonLogo({ size = 180 }: Props) {
         source={require('../../assets/images/kason-ghar-logo.jpg')}
         style={{ width: size, height: size }}
         resizeMode="cover"
-        accessibilityLabel="Kason Ghar — Traditional Assamese Weaves"
+        accessibilityLabel={brand.a11yLogo}
       />
     </View>
   );

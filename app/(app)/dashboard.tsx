@@ -13,6 +13,7 @@ import { KpiCard } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Screen } from '@/components/ui/Screen';
 import { Toast } from '@/components/ui/Toast';
+import { brand } from '@/constants/brand';
 import { colors } from '@/constants/theme';
 import { formatINR, formatNumber } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
@@ -134,10 +135,10 @@ export default function DashboardScreen() {
     >
       <View className="mb-4">
         <Text className="text-2xl font-bold text-maroon">
-          Namaskar, {profile?.full_name?.split(' ')[0] ?? 'User'}
+          {brand.welcomeAs}, {profile?.full_name?.split(' ')[0] ?? 'User'}
         </Text>
         <Text className="mt-1 text-sm text-slate-500">
-          {profile?.phone} · {(roles[0] ?? 'staff').replace('_', ' ')}
+          {brand.nameAs} · {profile?.phone} · {(roles[0] ?? 'staff').replace('_', ' ')}
         </Text>
       </View>
 

@@ -22,6 +22,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { brand } from '@/constants/brand';
 import { colors } from '@/constants/theme';
 import { useAuth } from '@/lib/auth';
 
@@ -123,10 +124,10 @@ export function BurgerButton() {
               />
               <View style={{ flex: 1 }}>
                 <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>
-                  {profile?.full_name ?? 'Kason Ghar'}
+                  {profile?.full_name ?? brand.nameAs}
                 </Text>
                 <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12 }}>
-                  {profile?.phone}
+                  {brand.nameAs} · {profile?.phone}
                 </Text>
                 <Text style={{ color: colors.mugaSoft, fontSize: 11, marginTop: 2 }}>
                   {(roles[0] ?? 'user').replace('_', ' ').toUpperCase()}

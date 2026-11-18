@@ -13,6 +13,7 @@ import { KasonLogo } from '@/components/logo/KasonLogo';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Toast } from '@/components/ui/Toast';
+import { brand } from '@/constants/brand';
 import { useAuth } from '@/lib/auth';
 
 export default function LoginScreen() {
@@ -66,8 +67,14 @@ export default function LoginScreen() {
         >
           <View className="mb-8 items-center">
             <KasonLogo size={132} />
-            <Text className="mt-3 text-center text-sm text-slate-500">
-              Mekhela Chador ERP · Inventory · Accounts
+            <Text className="mt-3 text-center text-2xl font-bold text-maroon">
+              {brand.nameAs}
+            </Text>
+            <Text className="mt-1 text-center text-sm text-slate-500">
+              {brand.loginSubtitleAs}
+            </Text>
+            <Text className="mt-1 text-center text-xs text-slate-400">
+              {brand.productEn} ERP · Inventory · Accounts
             </Text>
           </View>
 

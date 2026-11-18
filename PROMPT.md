@@ -1,5 +1,6 @@
-# PROJECT BLUEPRINT: KASON GHAR (कसों घर)
-# ERP, Consignment, Inventory & Accounting System for Mekhela Chador Business
+# PROJECT BLUEPRINT: KASON GHAR (কছন ঘৰ)
+# ERP, Consignment, Inventory & Accounting System for Assamese Mekhela Chador (মেখেলা চাদৰ)
+# Brand language: Assamese script only — never Hindi/Devanagari on UI.
 
 ## 1. PROJECT OBJECTIVES & CORE RULES
 - **Architecture:** React Native (Expo + TypeScript + Expo Router + NativeWind/Tailwind CSS + Lucide Icons).

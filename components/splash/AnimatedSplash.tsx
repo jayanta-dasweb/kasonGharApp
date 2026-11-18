@@ -9,6 +9,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { KasonLogo } from '@/components/logo/KasonLogo';
+import { brand } from '@/constants/brand';
 import { colors } from '@/constants/theme';
 
 type Props = {
@@ -88,8 +89,8 @@ export function AnimatedSplash({ onFinished }: Props) {
       </Animated.View>
 
       <Animated.View style={[styles.copy, titleStyle]}>
-        <Text style={styles.brandAssamese}>কছন ঘৰ</Text>
-        <Text style={styles.tagline}>পৰম্পৰাগত অসমীয়া বয়ন</Text>
+        <Text style={styles.brandAssamese}>{brand.nameAs}</Text>
+        <Text style={styles.tagline}>{brand.taglineAs}</Text>
       </Animated.View>
     </View>
   );

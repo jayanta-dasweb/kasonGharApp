@@ -1,6 +1,6 @@
-# Kason Ghar (कसों घर)
+# Kason Ghar (কছন ঘৰ)
 
-ERP, consignment, inventory & accounting for Mekhela Chador — Expo + TypeScript + Supabase.
+ERP, consignment, inventory & accounting for Assamese Mekhela Chador (মেখেলা চাদৰ) — Expo + TypeScript + Supabase. Brand copy uses Assamese script only (no Hindi/Devanagari).
 
 ## Setup
 
