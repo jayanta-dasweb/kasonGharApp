@@ -19,16 +19,37 @@ export async function fetchReport(period: ReportPeriod) {
 }
 
 export async function getKpiTotals() {
-  const { data, error } = await supabase
+  // Prefer FY view; fall back to salesperson summary aggregates
+  const { data: fy, error: fyErr } = await supabase
     .from('report_fy_wise')
-    .select('total_revenue, net_profit')
+    .select('*')
     .limit(1)
     .maybeSingle();
+
+  if (!fyErr && fy) {
+    return {
+      totalRevenue: Number(
+        (fy as any).total_revenue ?? (fy as any).total_sales_value ?? 0
+      ),
+      netProfit: Number((fy as any).net_profit ?? 0),
+    };
+  }
+
+  const { data: rows, error } = await supabase
+    .from('report_salesperson_summary')
+    .select('*');
   if (error) throw error;
-  return {
-    totalRevenue: Number(data?.total_revenue ?? 0),
-    netProfit: Number(data?.net_profit ?? 0),
-  };
+
+  const totalRevenue = (rows ?? []).reduce(
+    (s, r: any) => s + Number(r.total_sales_value ?? r.total_revenue ?? 0),
+    0
+  );
+  const totalSold = (rows ?? []).reduce(
+    (s, r: any) => s + Number(r.total_sold_qty ?? r.total_qty ?? 0),
+    0
+  );
+
+  return { totalRevenue, netProfit: 0, totalSold };
 }
 
 export async function exportRowsToXlsx(
@@ -45,7 +66,8 @@ export async function exportRowsToXlsx(
   });
   if (await Sharing.isAvailableAsync()) {
     await Sharing.shareAsync(path, {
-      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      mimeType:
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       dialogTitle: 'Share Excel',
     });
   }

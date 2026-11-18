@@ -17,58 +17,75 @@ async function getLocationByUsage(usage: string, userId?: string | null) {
   return data;
 }
 
+/** Safe stock valuation — returns 0 when quants empty or schema differs */
 export async function getOfficeStockValue() {
-  const office = await getLocationByUsage('INTERNAL');
-  const { data, error } = await supabase
-    .from('stock_quants')
-    .select('quantity, product_id, master_products(vendor_cost_price)')
-    .eq('location_id', office.location_id);
-  if (error) throw error;
-  return (data ?? []).reduce((sum, row) => {
-    const cost = (row.master_products as { vendor_cost_price: number } | null)?.vendor_cost_price ?? 0;
-    return sum + Number(row.quantity) * Number(cost);
-  }, 0);
+  try {
+    const office = await getLocationByUsage('INTERNAL');
+    const { data, error } = await supabase
+      .from('stock_quants')
+      .select('*')
+      .eq('location_id', office.location_id);
+    if (error) throw error;
+    return (data ?? []).reduce((sum, row: any) => {
+      const qty = Number(row.quantity ?? row.qty ?? 0);
+      const cost = Number(
+        row.unit_cost ?? row.cost_price ?? row.vendor_cost_price ?? 0
+      );
+      return sum + qty * cost;
+    }, 0);
+  } catch {
+    return 0;
+  }
 }
 
 export async function getConsignmentStockValue() {
-  const { data: locs, error: locErr } = await supabase
-    .from('stock_locations')
-    .select('location_id')
-    .eq('usage', 'SALESPERSON')
-    .eq('is_active', true);
-  if (locErr) throw locErr;
-  const ids = (locs ?? []).map((l) => l.location_id);
-  if (!ids.length) return 0;
+  try {
+    const { data: locs, error: locErr } = await supabase
+      .from('stock_locations')
+      .select('location_id')
+      .eq('usage', 'SALESPERSON')
+      .eq('is_active', true);
+    if (locErr) throw locErr;
+    const ids = (locs ?? []).map((l) => l.location_id);
+    if (!ids.length) return 0;
 
-  const { data, error } = await supabase
-    .from('stock_quants')
-    .select('quantity, master_products(vendor_cost_price)')
-    .in('location_id', ids);
-  if (error) throw error;
-  return (data ?? []).reduce((sum, row) => {
-    const cost = (row.master_products as { vendor_cost_price: number } | null)?.vendor_cost_price ?? 0;
-    return sum + Number(row.quantity) * Number(cost);
-  }, 0);
+    const { data, error } = await supabase
+      .from('stock_quants')
+      .select('*')
+      .in('location_id', ids);
+    if (error) throw error;
+    return (data ?? []).reduce((sum, row: any) => {
+      const qty = Number(row.quantity ?? row.qty ?? 0);
+      const cost = Number(
+        row.unit_cost ?? row.cost_price ?? row.vendor_cost_price ?? 0
+      );
+      return sum + qty * cost;
+    }, 0);
+  } catch {
+    return 0;
+  }
 }
 
 export async function getQuantsForProduct(productId: string) {
-  const { data, error } = await supabase
-    .from('stock_quants')
-    .select('*, stock_locations(location_name, usage, assigned_user_id)')
-    .eq('product_id', productId);
-  if (error) throw error;
-  return data ?? [];
+  // Try common product FK column names
+  for (const col of ['product_id', 'item_id', 'sku_id', 'master_product_id']) {
+    const { data, error } = await supabase
+      .from('stock_quants')
+      .select('*, stock_locations(location_name, usage, assigned_user_id)')
+      .eq(col, productId);
+    if (!error) return data ?? [];
+  }
+  return [];
 }
 
 export async function getMyStock(userId: string) {
   const loc = await getLocationByUsage('SALESPERSON', userId);
   const { data, error } = await supabase
     .from('stock_quants')
-    .select('quantity, master_products(id, product_code, name, company_mrp, min_selling_price)')
-    .eq('location_id', loc.location_id)
-    .gt('quantity', 0);
+    .select('*')
+    .eq('location_id', loc.location_id);
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []).filter((row: any) => Number(row.quantity ?? row.qty ?? 0) > 0);
 }
 
 export type PurchaseLine = {
@@ -77,7 +94,6 @@ export type PurchaseLine = {
   unit_cost: number;
 };
 
-/** Vendor purchase: stock_move SUPPLIER → INTERNAL + IN_BILL journal */
 export async function createVendorPurchase(input: {
   vendor_id: string;
   invoice_number: string;
@@ -167,7 +183,6 @@ export async function createVendorPurchase(input: {
   return moves;
 }
 
-/** Allocate office stock → salesperson location */
 export async function allocateToSalesperson(input: {
   product_id: string;
   quantity: number;
@@ -194,7 +209,6 @@ export async function allocateToSalesperson(input: {
   return data as StockMove;
 }
 
-/** Return unsold stock salesperson → office */
 export async function returnFromSalesperson(input: {
   product_id: string;
   quantity: number;

@@ -6,11 +6,10 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/constants/theme';
 
 type Props = {
-  title: string;
+  title?: string;
   children: ReactNode;
   loading?: boolean;
   onRefresh?: () => void;
@@ -27,25 +26,29 @@ export function Screen({
   right,
 }: Props) {
   return (
-    <SafeAreaView className="flex-1 bg-cream" edges={['top']}>
-      <View className="flex-row items-center justify-between px-4 pb-2 pt-2">
-        <Text className="text-2xl font-bold text-royal">{title}</Text>
-        {right}
-      </View>
+    <View className="flex-1 bg-cream">
+      {title ? (
+        <View className="flex-row items-center justify-between px-4 pb-2 pt-2">
+          <Text className="text-2xl font-bold" style={{ color: colors.maroon }}>
+            {title}
+          </Text>
+          {right}
+        </View>
+      ) : null}
       {loading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={colors.royal} />
+          <ActivityIndicator size="large" color={colors.maroon} />
         </View>
       ) : (
         <ScrollView
           className="flex-1 px-4"
-          contentContainerStyle={{ paddingBottom: 40 }}
+          contentContainerStyle={{ paddingBottom: 40, paddingTop: title ? 0 : 8 }}
           refreshControl={
             onRefresh ? (
               <RefreshControl
                 refreshing={!!refreshing}
                 onRefresh={onRefresh}
-                tintColor={colors.royal}
+                tintColor={colors.maroon}
               />
             ) : undefined
           }
@@ -53,6 +56,6 @@ export function Screen({
           {children}
         </ScrollView>
       )}
-    </SafeAreaView>
+    </View>
   );
 }

@@ -15,7 +15,7 @@ export function KpiCard({ title, value, subtitle, accent = 'royal' }: Props) {
       </Text>
       <Text
         className="mt-2 text-xl font-bold"
-        style={{ color: accent === 'royal' ? '#1E3A8A' : '#D97706' }}
+        style={{ color: accent === 'royal' ? '#6B1E2A' : '#D97706' }}
       >
         {value}
       </Text>
