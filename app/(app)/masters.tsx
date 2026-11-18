@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Alert, Pressable, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -17,6 +17,16 @@ import {
   createPartner,
   createProduct,
   createWeave,
+  deleteAccount,
+  deleteCategory,
+  deleteExpenseHead,
+  deleteFabric,
+  deleteFinancialYear,
+  deleteJournal,
+  deleteLocation,
+  deletePartner,
+  deleteProduct,
+  deleteWeave,
   listAccounts,
   listCategories,
   listExpenseHeads,
@@ -27,32 +37,43 @@ import {
   listPartners,
   listProducts,
   listWeaves,
+  setAccountActive,
+  setCategoryActive,
+  setExpenseHeadActive,
+  setFabricActive,
+  setJournalActive,
+  setLocationActive,
+  setPartnerActive,
+  setProductActive,
+  setWeaveActive,
+  updateAccount,
+  updateCategory,
+  updateExpenseHead,
+  updateFabric,
+  updateFinancialYear,
+  updateJournal,
+  updateLocation,
+  updatePartner,
+  updateProduct,
+  updateWeave,
 } from '@/services/masters';
 
 const SECTIONS = [
-  { key: 'FY', label: 'Financial Year', help: 'Accounting period (FY name + dates).' },
-  { key: 'Categories', label: 'Categories', help: 'Product group (Mekhela, Chador, Set…).' },
-  { key: 'Fabrics', label: 'Fabrics', help: 'Muga / Pat / Eri / Cotton + origin.' },
-  { key: 'Weaves', label: 'Weaves', help: 'Weave family, region, motif.' },
-  { key: 'Partners', label: 'Partners', help: 'Vendor/Customer with GSTIN, credit & bank.' },
-  { key: 'Products', label: 'Products', help: 'SKU: code, color, HSN, cost, MRP, stock UOM.' },
-  { key: 'Locations', label: 'Stock Locations', help: 'Warehouses / salesperson bags.' },
-  { key: 'Accounts', label: 'Chart of Accounts', help: 'Ledger accounts for journal posting.' },
-  { key: 'Journals', label: 'Journals', help: 'IN_BILL, OUT_INVOICE, cash, bank…' },
-  { key: 'Expenses', label: 'Expense Heads', help: 'Expense classification for P&L.' },
+  { key: 'FY', label: 'Financial Year' },
+  { key: 'Categories', label: 'Categories' },
+  { key: 'Fabrics', label: 'Fabrics' },
+  { key: 'Weaves', label: 'Weaves' },
+  { key: 'Partners', label: 'Partners' },
+  { key: 'Products', label: 'Products' },
+  { key: 'Locations', label: 'Locations' },
+  { key: 'Accounts', label: 'Accounts' },
+  { key: 'Journals', label: 'Journals' },
+  { key: 'Expenses', label: 'Expenses' },
 ] as const;
 
 type Tab = (typeof SECTIONS)[number]['key'];
 
-function Chip({
-  label,
-  active,
-  onPress,
-}: {
-  label: string;
-  active: boolean;
-  onPress: () => void;
-}) {
+function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
   return (
     <Pressable
       onPress={onPress}
@@ -67,9 +88,35 @@ function Chip({
         borderColor: active ? colors.maroon : colors.border,
       }}
     >
-      <Text style={{ color: active ? '#fff' : colors.ink, fontSize: 12, fontWeight: '700' }}>
-        {label}
-      </Text>
+      <Text style={{ color: active ? '#fff' : colors.ink, fontSize: 12, fontWeight: '700' }}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function ActionBtn({
+  label,
+  onPress,
+  tone = 'default',
+}: {
+  label: string;
+  onPress: () => void;
+  tone?: 'default' | 'danger' | 'ok';
+}) {
+  const bg = tone === 'danger' ? '#FEE2E2' : tone === 'ok' ? '#D1FAE5' : '#F1F5F9';
+  const color = tone === 'danger' ? '#DC2626' : tone === 'ok' ? '#059669' : colors.ink;
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{
+        backgroundColor: bg,
+        borderRadius: 8,
+        paddingHorizontal: 10,
+        paddingVertical: 8,
+        marginRight: 8,
+        marginTop: 8,
+      }}
+    >
+      <Text style={{ color, fontSize: 12, fontWeight: '700' }}>{label}</Text>
     </Pressable>
   );
 }
@@ -118,23 +165,18 @@ export default function MastersScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [showInactive, setShowInactive] = useState(true);
 
-  // shared
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [notes, setNotes] = useState('');
-
-  // FY
   const [fyName, setFyName] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-
-  // fabric/weave extras
   const [origin, setOrigin] = useState('');
   const [region, setRegion] = useState('');
   const [motif, setMotif] = useState('');
-
-  // partner
   const [partnerType, setPartnerType] = useState<'vendor' | 'customer' | 'both'>('vendor');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -150,8 +192,6 @@ export default function MastersScreen() {
   const [bankName, setBankName] = useState('');
   const [bankAccount, setBankAccount] = useState('');
   const [ifsc, setIfsc] = useState('');
-
-  // product
   const [productCode, setProductCode] = useState('');
   const [color, setColor] = useState('');
   const [designName, setDesignName] = useState('');
@@ -168,22 +208,23 @@ export default function MastersScreen() {
   const [categoryId, setCategoryId] = useState('');
   const [fabricId, setFabricId] = useState('');
   const [weaveId, setWeaveId] = useState('');
-
-  // location / accounts / journals
   const [acctCode, setAcctCode] = useState('');
   const [acctType, setAcctType] = useState('asset');
   const [acctSubtype, setAcctSubtype] = useState('');
   const [openingBal, setOpeningBal] = useState('0');
   const [journalType, setJournalType] = useState('general');
   const [locCode, setLocCode] = useState('');
-  const [locUsage, setLocUsage] = useState<'SUPPLIER' | 'INTERNAL' | 'SALESPERSON' | 'CUSTOMER'>(
-    'INTERNAL'
-  );
+  const [locUsage, setLocUsage] = useState<'SUPPLIER' | 'INTERNAL' | 'SALESPERSON' | 'CUSTOMER'>('INTERNAL');
   const [locAddress, setLocAddress] = useState('');
 
   const section = useMemo(() => SECTIONS.find((s) => s.key === tab)!, [tab]);
+  const visibleItems = useMemo(
+    () => (showInactive ? items : items.filter((i) => i.is_active !== false && i.is_closed !== true)),
+    [items, showInactive]
+  );
 
   const resetForm = () => {
+    setEditingId(null);
     setName('');
     setDescription('');
     setNotes('');
@@ -273,26 +314,143 @@ export default function MastersScreen() {
     }, [load])
   );
 
+  const beginEdit = (item: any) => {
+    setEditingId(String(item.id));
+    setOk(null);
+    setError(null);
+    setName(item.name ?? item.product_name ?? '');
+    setDescription(item.description ?? '');
+    setNotes(item.notes ?? '');
+    setFyName(item.fy_name ?? '');
+    setStartDate(item.start_date ?? '');
+    setEndDate(item.end_date ?? '');
+    setOrigin(item.origin ?? '');
+    setRegion(item.region ?? '');
+    setMotif(item.motif ?? '');
+    setPartnerType((item.partner_type ?? 'vendor').toLowerCase());
+    setPhone(item.phone ?? '');
+    setEmail(item.email ?? '');
+    setAddress(item.address ?? '');
+    setCity(item.city ?? '');
+    setStateName(item.state ?? '');
+    setPincode(item.pincode ?? '');
+    setGstin(item.gstin ?? '');
+    setPan(item.pan ?? '');
+    setContactPerson(item.contact_person ?? '');
+    setCreditLimit(String(item.credit_limit ?? ''));
+    setPaymentTerms(item.payment_terms ?? '');
+    setBankName(item.bank_name ?? '');
+    setBankAccount(item.bank_account ?? '');
+    setIfsc(item.ifsc ?? '');
+    setProductCode(item.product_code ?? '');
+    setColor(item.color ?? '');
+    setDesignName(item.design_name ?? '');
+    setBarcode(item.barcode ?? '');
+    setHsn(item.hsn_code ?? '');
+    setUom(item.uom ?? 'PCS');
+    setCost(String(item.vendor_cost_price ?? ''));
+    setMrp(String(item.company_mrp ?? ''));
+    setMinPrice(String(item.min_selling_price ?? ''));
+    setWholesale(String(item.wholesale_price ?? ''));
+    setReorder(String(item.reorder_level ?? ''));
+    setLengthMtr(String(item.length_mtr ?? ''));
+    setWidthInch(String(item.width_inch ?? ''));
+    setCategoryId(item.category_id != null ? String(item.category_id) : '');
+    setFabricId(item.fabric_id != null ? String(item.fabric_id) : '');
+    setWeaveId(item.weave_id != null ? String(item.weave_id) : '');
+    setAcctCode(item.code ?? '');
+    setAcctType(item.account_type ?? 'asset');
+    setAcctSubtype(item.account_subtype ?? '');
+    setOpeningBal(String(item.opening_balance ?? '0'));
+    setJournalType(item.type ?? 'general');
+    setLocCode(item.code ?? item.location_code ?? '');
+    setLocUsage(item.usage ?? 'INTERNAL');
+    setLocAddress(item.address ?? '');
+  };
+
+  const confirmDelete = (item: any) => {
+    Alert.alert('Delete record?', `${item.name ?? item.product_code ?? item.id}`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            setError(null);
+            if (tab === 'FY') await deleteFinancialYear(item.id);
+            else if (tab === 'Categories') await deleteCategory(item.id);
+            else if (tab === 'Fabrics') await deleteFabric(item.id);
+            else if (tab === 'Weaves') await deleteWeave(item.id);
+            else if (tab === 'Partners') await deletePartner(item.id);
+            else if (tab === 'Products') await deleteProduct(String(item.product_code ?? item.id));
+            else if (tab === 'Locations') await deleteLocation(item.id);
+            else if (tab === 'Accounts') await deleteAccount(item.id);
+            else if (tab === 'Journals') await deleteJournal(item.id);
+            else if (tab === 'Expenses') await deleteExpenseHead(item.id);
+            setOk('Deleted (or inactivated if in use)');
+            if (editingId === String(item.id)) resetForm();
+            await load();
+          } catch (e) {
+            setError(e instanceof Error ? e.message : 'Delete failed');
+            await load();
+          }
+        },
+      },
+    ]);
+  };
+
+  const toggleActive = async (item: any) => {
+    const next = item.is_active === false;
+    try {
+      if (tab === 'Categories') await setCategoryActive(item.id, next);
+      else if (tab === 'Fabrics') await setFabricActive(item.id, next);
+      else if (tab === 'Weaves') await setWeaveActive(item.id, next);
+      else if (tab === 'Partners') await setPartnerActive(item.id, next);
+      else if (tab === 'Products') await setProductActive(String(item.product_code ?? item.id), next);
+      else if (tab === 'Locations') await setLocationActive(item.id, next);
+      else if (tab === 'Accounts') await setAccountActive(item.id, next);
+      else if (tab === 'Journals') await setJournalActive(item.id, next);
+      else if (tab === 'Expenses') await setExpenseHeadActive(item.id, next);
+      else if (tab === 'FY') {
+        await updateFinancialYear(item.id, {
+          fy_name: item.fy_name,
+          start_date: item.start_date,
+          end_date: item.end_date,
+          is_closed: !item.is_closed,
+        });
+      }
+      setOk(next ? 'Activated' : 'Deactivated');
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Status update failed');
+    }
+  };
+
   const onSave = async () => {
     setSaving(true);
     setError(null);
     setOk(null);
     try {
+      const isEdit = Boolean(editingId);
       if (tab === 'FY') {
-        if (!startDate || !endDate) throw new Error('Start & end dates required (YYYY-MM-DD)');
-        await createFinancialYear({ fy_name: fyName, start_date: startDate, end_date: endDate });
+        if (!startDate || !endDate) throw new Error('Start & end dates required');
+        if (isEdit) await updateFinancialYear(editingId!, { fy_name: fyName, start_date: startDate, end_date: endDate });
+        else await createFinancialYear({ fy_name: fyName, start_date: startDate, end_date: endDate });
       } else if (tab === 'Categories') {
-        if (!name.trim()) throw new Error('Category name required');
-        await createCategory({ name, description });
+        if (!name.trim()) throw new Error('Name required');
+        if (isEdit) await updateCategory(editingId!, { name, description });
+        else await createCategory({ name, description });
       } else if (tab === 'Fabrics') {
-        if (!name.trim()) throw new Error('Fabric name required');
-        await createFabric({ name, description, origin });
+        if (!name.trim()) throw new Error('Name required');
+        if (isEdit) await updateFabric(editingId!, { name, description, origin });
+        else await createFabric({ name, description, origin });
       } else if (tab === 'Weaves') {
-        if (!name.trim()) throw new Error('Weave name required');
-        await createWeave({ name, description, region, motif });
+        if (!name.trim()) throw new Error('Name required');
+        if (isEdit) await updateWeave(editingId!, { name, description, region, motif });
+        else await createWeave({ name, description, region, motif });
       } else if (tab === 'Partners') {
-        if (!name.trim()) throw new Error('Partner name required');
-        await createPartner({
+        if (!name.trim()) throw new Error('Name required');
+        const payload = {
           name,
           partner_type: partnerType,
           phone,
@@ -310,10 +468,12 @@ export default function MastersScreen() {
           bank_account: bankAccount,
           ifsc,
           notes,
-        });
+        };
+        if (isEdit) await updatePartner(editingId!, payload);
+        else await createPartner(payload);
       } else if (tab === 'Products') {
         if (!productCode.trim() || !name.trim()) throw new Error('Product code & name required');
-        await createProduct({
+        const payload = {
           product_code: productCode,
           name,
           category_id: categoryId || null,
@@ -332,34 +492,36 @@ export default function MastersScreen() {
           length_mtr: lengthMtr ? Number(lengthMtr) : undefined,
           width_inch: widthInch ? Number(widthInch) : undefined,
           notes,
-        });
+        };
+        if (isEdit) await updateProduct(String(editingId), payload);
+        else await createProduct(payload);
       } else if (tab === 'Locations') {
-        if (!locCode.trim() || !name.trim()) throw new Error('Location code & name required');
-        await createLocation({
-          code: locCode,
-          name,
-          usage: locUsage,
-          address: locAddress,
-          notes,
-        });
+        if (!locCode.trim() || !name.trim()) throw new Error('Code & name required');
+        const payload = { code: locCode, name, usage: locUsage, address: locAddress, notes };
+        if (isEdit) await updateLocation(editingId!, payload);
+        else await createLocation(payload);
       } else if (tab === 'Accounts') {
-        if (!acctCode.trim() || !name.trim()) throw new Error('Account code & name required');
-        await createAccount({
+        if (!acctCode.trim() || !name.trim()) throw new Error('Code & name required');
+        const payload = {
           code: acctCode,
           name,
           account_type: acctType,
           account_subtype: acctSubtype,
           opening_balance: Number(openingBal || 0),
           notes,
-        });
+        };
+        if (isEdit) await updateAccount(editingId!, payload);
+        else await createAccount(payload);
       } else if (tab === 'Journals') {
-        if (!acctCode.trim() || !name.trim()) throw new Error('Journal code & name required');
-        await createJournal({ code: acctCode, name, type: journalType, notes });
+        if (!acctCode.trim() || !name.trim()) throw new Error('Code & name required');
+        if (isEdit) await updateJournal(editingId!, { code: acctCode, name, type: journalType, notes });
+        else await createJournal({ code: acctCode, name, type: journalType, notes });
       } else if (tab === 'Expenses') {
-        if (!name.trim()) throw new Error('Expense head required');
-        await createExpenseHead({ name, description });
+        if (!name.trim()) throw new Error('Name required');
+        if (isEdit) await updateExpenseHead(editingId!, { name, description });
+        else await createExpenseHead({ name, description });
       }
-      setOk('Saved to database');
+      setOk(isEdit ? 'Updated successfully' : 'Created successfully');
       resetForm();
       await load();
     } catch (e) {
@@ -370,15 +532,10 @@ export default function MastersScreen() {
   };
 
   return (
-    <Screen title="Master Data Hub" loading={loading}>
-      <View className="mb-3 rounded-2xl bg-white p-3">
-        <Text className="text-sm font-semibold text-maroon">Accountant / Inventory setup</Text>
-        <Text className="mt-1 text-xs text-slate-500">
-          First run SQL file supabase/erp_masters_enrichment.sql in Supabase (adds GSTIN, color,
-          HSN, reorder, bank fields, etc.). Then create masters in order: FY → Categories → Fabrics
-          → Weaves → Partners → Products → Accounts → Journals → Locations.
-        </Text>
-      </View>
+    <Screen title="Master Control" loading={loading}>
+      <Text className="mb-2 text-sm text-slate-500">
+        Full control: Create · Edit · Activate/Deactivate · Delete. Run erp_masters_enrichment.sql once for extra columns.
+      </Text>
 
       <View className="mb-3 flex-row flex-wrap">
         {SECTIONS.map((s) => (
@@ -388,6 +545,7 @@ export default function MastersScreen() {
             active={tab === s.key}
             onPress={() => {
               setTab(s.key);
+              resetForm();
               setLoading(true);
               setOk(null);
               setError(null);
@@ -397,47 +555,46 @@ export default function MastersScreen() {
       </View>
 
       <View className="mb-3 rounded-2xl bg-white p-4">
-        <Text className="text-lg font-bold text-maroon">{section.label}</Text>
-        <Text className="mb-3 mt-1 text-xs text-slate-500">{section.help}</Text>
+        <View className="mb-2 flex-row items-center justify-between">
+          <Text className="text-lg font-bold text-maroon">
+            {editingId ? `Edit ${section.label}` : `Add ${section.label}`}
+          </Text>
+          {editingId ? <ActionBtn label="Cancel edit" onPress={resetForm} /> : null}
+        </View>
         <Toast message={error} />
         <Toast message={ok} type="success" />
 
         {tab === 'FY' ? (
           <>
             <Input label="FY name" value={fyName} onChangeText={setFyName} placeholder="2025-26" />
-            <Input label="Start date (YYYY-MM-DD)" value={startDate} onChangeText={setStartDate} placeholder="2025-04-01" />
-            <Input label="End date (YYYY-MM-DD)" value={endDate} onChangeText={setEndDate} placeholder="2026-03-31" />
+            <Input label="Start (YYYY-MM-DD)" value={startDate} onChangeText={setStartDate} />
+            <Input label="End (YYYY-MM-DD)" value={endDate} onChangeText={setEndDate} />
           </>
         ) : null}
-
         {tab === 'Categories' ? (
           <>
-            <Input label="Category name" value={name} onChangeText={setName} />
+            <Input label="Name" value={name} onChangeText={setName} />
             <Input label="Description" value={description} onChangeText={setDescription} />
           </>
         ) : null}
-
         {tab === 'Fabrics' ? (
           <>
-            <Input label="Fabric name" value={name} onChangeText={setName} placeholder="Muga / Pat / Eri" />
-            <Input label="Origin" value={origin} onChangeText={setOrigin} placeholder="Sualkuchi / Assam" />
+            <Input label="Name" value={name} onChangeText={setName} />
+            <Input label="Origin" value={origin} onChangeText={setOrigin} />
             <Input label="Description" value={description} onChangeText={setDescription} />
           </>
         ) : null}
-
         {tab === 'Weaves' ? (
           <>
-            <Input label="Weave name" value={name} onChangeText={setName} />
+            <Input label="Name" value={name} onChangeText={setName} />
             <Input label="Region" value={region} onChangeText={setRegion} />
-            <Input label="Motif" value={motif} onChangeText={setMotif} placeholder="Buta / Jaapi / Floral" />
+            <Input label="Motif" value={motif} onChangeText={setMotif} />
             <Input label="Description" value={description} onChangeText={setDescription} />
           </>
         ) : null}
-
         {tab === 'Partners' ? (
           <>
-            <Input label="Legal / trade name" value={name} onChangeText={setName} />
-            <Text className="mb-2 text-sm font-medium text-slate-600">Type</Text>
+            <Input label="Name" value={name} onChangeText={setName} />
             <View className="mb-2 flex-row flex-wrap">
               {(['vendor', 'customer', 'both'] as const).map((t) => (
                 <Chip key={t} label={t} active={partnerType === t} onPress={() => setPartnerType(t)} />
@@ -452,43 +609,48 @@ export default function MastersScreen() {
             <Input label="City" value={city} onChangeText={setCity} />
             <Input label="State" value={stateName} onChangeText={setStateName} />
             <Input label="Pincode" value={pincode} onChangeText={setPincode} keyboardType="number-pad" />
-            <Input label="Credit limit (₹)" value={creditLimit} onChangeText={setCreditLimit} keyboardType="numeric" />
-            <Input label="Payment terms" value={paymentTerms} onChangeText={setPaymentTerms} placeholder="Net 30 / Advance" />
+            <Input label="Credit limit" value={creditLimit} onChangeText={setCreditLimit} keyboardType="numeric" />
+            <Input label="Payment terms" value={paymentTerms} onChangeText={setPaymentTerms} />
             <Input label="Bank name" value={bankName} onChangeText={setBankName} />
-            <Input label="Bank account no." value={bankAccount} onChangeText={setBankAccount} />
+            <Input label="Bank account" value={bankAccount} onChangeText={setBankAccount} />
             <Input label="IFSC" value={ifsc} onChangeText={setIfsc} autoCapitalize="characters" />
             <Input label="Notes" value={notes} onChangeText={setNotes} />
           </>
         ) : null}
-
         {tab === 'Products' ? (
           <>
-            <Input label="Product code (SKU)" value={productCode} onChangeText={setProductCode} />
+            <Input
+              label="Product code"
+              value={productCode}
+              onChangeText={setProductCode}
+              // code is PK — lock while editing
+            />
+            {editingId ? (
+              <Text className="mb-2 text-xs text-slate-500">Code is primary key — create new SKU to change code.</Text>
+            ) : null}
             <Input label="Product name" value={name} onChangeText={setName} />
-            <Input label="Design name" value={designName} onChangeText={setDesignName} />
-            <Input label="Color" value={color} onChangeText={setColor} placeholder="Maroon / Cream / Gold" />
+            <Input label="Design" value={designName} onChangeText={setDesignName} />
+            <Input label="Color" value={color} onChangeText={setColor} />
             <SelectRow label="Category" options={categories} value={categoryId} onChange={setCategoryId} />
             <SelectRow label="Fabric" options={fabrics} value={fabricId} onChange={setFabricId} />
             <SelectRow label="Weave" options={weaves} value={weaveId} onChange={setWeaveId} />
-            <Input label="HSN code" value={hsn} onChangeText={setHsn} placeholder="5007 / 5407" />
+            <Input label="HSN" value={hsn} onChangeText={setHsn} />
             <Input label="Barcode" value={barcode} onChangeText={setBarcode} />
-            <Input label="UOM" value={uom} onChangeText={setUom} placeholder="PCS / SET / MTR" />
-            <Input label="Length (mtr)" value={lengthMtr} onChangeText={setLengthMtr} keyboardType="numeric" />
-            <Input label="Width (inch)" value={widthInch} onChangeText={setWidthInch} keyboardType="numeric" />
-            <Input label="Vendor cost (₹)" value={cost} onChangeText={setCost} keyboardType="numeric" />
-            <Input label="Wholesale price (₹)" value={wholesale} onChangeText={setWholesale} keyboardType="numeric" />
-            <Input label="Company MRP (₹)" value={mrp} onChangeText={setMrp} keyboardType="numeric" />
-            <Input label="Min selling price (₹)" value={minPrice} onChangeText={setMinPrice} keyboardType="numeric" />
-            <Input label="Reorder level (qty)" value={reorder} onChangeText={setReorder} keyboardType="numeric" />
+            <Input label="UOM" value={uom} onChangeText={setUom} />
+            <Input label="Length mtr" value={lengthMtr} onChangeText={setLengthMtr} keyboardType="numeric" />
+            <Input label="Width inch" value={widthInch} onChangeText={setWidthInch} keyboardType="numeric" />
+            <Input label="Vendor cost" value={cost} onChangeText={setCost} keyboardType="numeric" />
+            <Input label="Wholesale" value={wholesale} onChangeText={setWholesale} keyboardType="numeric" />
+            <Input label="MRP" value={mrp} onChangeText={setMrp} keyboardType="numeric" />
+            <Input label="Min sell" value={minPrice} onChangeText={setMinPrice} keyboardType="numeric" />
+            <Input label="Reorder level" value={reorder} onChangeText={setReorder} keyboardType="numeric" />
             <Input label="Notes" value={notes} onChangeText={setNotes} />
           </>
         ) : null}
-
         {tab === 'Locations' ? (
           <>
-            <Input label="Location code" value={locCode} onChangeText={setLocCode} placeholder="LOC-OFFICE" />
-            <Input label="Location name" value={name} onChangeText={setName} />
-            <Text className="mb-2 text-sm font-medium text-slate-600">Usage</Text>
+            <Input label="Code" value={locCode} onChangeText={setLocCode} />
+            <Input label="Name" value={name} onChangeText={setName} />
             <View className="mb-2 flex-row flex-wrap">
               {(['SUPPLIER', 'INTERNAL', 'SALESPERSON', 'CUSTOMER'] as const).map((u) => (
                 <Chip key={u} label={u} active={locUsage === u} onPress={() => setLocUsage(u)} />
@@ -498,93 +660,107 @@ export default function MastersScreen() {
             <Input label="Notes" value={notes} onChangeText={setNotes} />
           </>
         ) : null}
-
         {tab === 'Accounts' ? (
           <>
-            <Input label="Account code" value={acctCode} onChangeText={setAcctCode} placeholder="1300" />
-            <Input label="Account name" value={name} onChangeText={setName} placeholder="Inventory Asset" />
-            <Input label="Account type" value={acctType} onChangeText={setAcctType} placeholder="asset / liability / income / expense" />
-            <Input label="Subtype" value={acctSubtype} onChangeText={setAcctSubtype} placeholder="current asset / COGS…" />
-            <Input label="Opening balance (₹)" value={openingBal} onChangeText={setOpeningBal} keyboardType="numeric" />
+            <Input label="Code" value={acctCode} onChangeText={setAcctCode} />
+            <Input label="Name" value={name} onChangeText={setName} />
+            <Input label="Type" value={acctType} onChangeText={setAcctType} />
+            <Input label="Subtype" value={acctSubtype} onChangeText={setAcctSubtype} />
+            <Input label="Opening balance" value={openingBal} onChangeText={setOpeningBal} keyboardType="numeric" />
             <Input label="Notes" value={notes} onChangeText={setNotes} />
           </>
         ) : null}
-
         {tab === 'Journals' ? (
           <>
-            <Input label="Journal code" value={acctCode} onChangeText={setAcctCode} placeholder="IN_BILL" />
-            <Input label="Journal name" value={name} onChangeText={setName} />
-            <Input label="Type" value={journalType} onChangeText={setJournalType} placeholder="purchase / sale / cash / bank" />
+            <Input label="Code" value={acctCode} onChangeText={setAcctCode} />
+            <Input label="Name" value={name} onChangeText={setName} />
+            <Input label="Type" value={journalType} onChangeText={setJournalType} />
             <Input label="Notes" value={notes} onChangeText={setNotes} />
           </>
         ) : null}
-
         {tab === 'Expenses' ? (
           <>
-            <Input label="Expense head name" value={name} onChangeText={setName} />
+            <Input label="Head name" value={name} onChangeText={setName} />
             <Input label="Description" value={description} onChangeText={setDescription} />
           </>
         ) : null}
 
-        <Button label={`Save ${section.label}`} onPress={onSave} loading={saving} />
+        <Button
+          label={editingId ? `Update ${section.label}` : `Create ${section.label}`}
+          onPress={onSave}
+          loading={saving}
+        />
       </View>
 
-      <Text className="mb-2 text-base font-bold text-ink">
-        Existing {section.label} ({items.length})
-      </Text>
+      <View className="mb-2 flex-row items-center justify-between">
+        <Text className="text-base font-bold text-ink">
+          Records ({visibleItems.length}/{items.length})
+        </Text>
+        <ActionBtn
+          label={showInactive ? 'Hide inactive' : 'Show inactive'}
+          onPress={() => setShowInactive((v) => !v)}
+        />
+      </View>
 
-      {items.length === 0 ? (
+      {visibleItems.length === 0 ? (
         <View className="rounded-2xl bg-white p-4">
-          <Text className="font-semibold text-maroon">No records yet</Text>
-          <Text className="mt-1 text-sm text-slate-500">
-            Fill the form above and save. If save fails on new fields, run erp_masters_enrichment.sql first.
-          </Text>
+          <Text className="font-semibold text-maroon">No records</Text>
+          <Text className="mt-1 text-sm text-slate-500">Create one using the form above.</Text>
         </View>
       ) : (
-        items.map((item, idx) => (
-          <View
-            key={String(item.id ?? item.product_code ?? item.code ?? idx)}
-            className="mb-2 rounded-xl bg-white px-3 py-3"
-          >
-            <Text className="font-semibold text-ink">
-              {item.product_code ? `${item.product_code} · ` : ''}
-              {item.code ? `${item.code} · ` : ''}
-              {item.name}
-            </Text>
-            {item.color || item.design_name ? (
-              <Text className="text-xs text-slate-500">
-                {[item.design_name, item.color, item.uom, item.hsn_code].filter(Boolean).join(' · ')}
+        visibleItems.map((item, idx) => {
+          const inactive = item.is_active === false || item.is_closed === true;
+          return (
+            <View
+              key={String(item.id ?? item.product_code ?? idx)}
+              className="mb-2 rounded-xl bg-white px-3 py-3"
+              style={{ opacity: inactive ? 0.65 : 1 }}
+            >
+              <Text className="font-semibold text-ink">
+                {item.product_code ? `${item.product_code} · ` : ''}
+                {item.code ? `${item.code} · ` : ''}
+                {item.name}
               </Text>
-            ) : null}
-            {item.company_mrp != null ? (
-              <Text className="text-xs text-slate-500">
-                Cost ₹{item.vendor_cost_price} · MRP ₹{item.company_mrp} · Min ₹{item.min_selling_price}
-                {item.wholesale_price != null ? ` · WS ₹${item.wholesale_price}` : ''}
+              <Text className="mt-1 text-xs font-semibold" style={{ color: inactive ? colors.danger : colors.success }}>
+                {tab === 'FY'
+                  ? item.is_closed
+                    ? 'CLOSED'
+                    : 'OPEN'
+                  : inactive
+                    ? 'INACTIVE'
+                    : 'ACTIVE'}
               </Text>
-            ) : null}
-            {item.partner_type ? (
-              <Text className="text-xs text-slate-500">
-                {item.partner_type}
-                {item.gstin ? ` · GSTIN ${item.gstin}` : ''}
-                {item.phone ? ` · ${item.phone}` : ''}
-                {item.city ? ` · ${item.city}` : ''}
-              </Text>
-            ) : null}
-            {item.usage ? (
-              <Text className="text-xs text-slate-500">
-                {item.code} · {item.usage}
-              </Text>
-            ) : null}
-            {item.account_type ? (
-              <Text className="text-xs text-slate-500">
-                {item.account_type}
-                {item.account_subtype ? ` / ${item.account_subtype}` : ''}
-              </Text>
-            ) : null}
-            {item.type ? <Text className="text-xs text-slate-500">{item.type}</Text> : null}
-            {item.description ? <Text className="text-xs text-slate-500">{item.description}</Text> : null}
-          </View>
-        ))
+              {item.company_mrp != null ? (
+                <Text className="text-xs text-slate-500">
+                  Cost ₹{item.vendor_cost_price} · MRP ₹{item.company_mrp} · Min ₹{item.min_selling_price}
+                </Text>
+              ) : null}
+              {item.partner_type ? (
+                <Text className="text-xs text-slate-500">
+                  {item.partner_type}
+                  {item.gstin ? ` · ${item.gstin}` : ''}
+                  {item.phone ? ` · ${item.phone}` : ''}
+                </Text>
+              ) : null}
+              <View className="flex-row flex-wrap">
+                <ActionBtn label="Edit" onPress={() => beginEdit(item)} />
+                {tab !== 'FY' ? (
+                  <ActionBtn
+                    label={item.is_active === false ? 'Activate' : 'Deactivate'}
+                    tone={item.is_active === false ? 'ok' : 'default'}
+                    onPress={() => toggleActive(item)}
+                  />
+                ) : (
+                  <ActionBtn
+                    label={item.is_closed ? 'Re-open FY' : 'Close FY'}
+                    onPress={() => toggleActive(item)}
+                  />
+                )}
+                <ActionBtn label="Delete" tone="danger" onPress={() => confirmDelete(item)} />
+              </View>
+            </View>
+          );
+        })
       )}
     </Screen>
   );

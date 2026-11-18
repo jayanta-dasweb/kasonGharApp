@@ -9,6 +9,7 @@ import {
   PackageSearch,
   Settings2,
   Shield,
+  Wallet,
   X,
 } from 'lucide-react-native';
 import { useState } from 'react';
@@ -50,6 +51,16 @@ export function BurgerButton() {
       href: '/(app)/inventory',
       icon: Boxes,
       show: isAdmin || hasPermission('inventory.manage'),
+    },
+    {
+      label: 'Accounts Ledger',
+      href: '/(app)/accounts',
+      icon: Wallet,
+      show:
+        isAdmin ||
+        hasPermission('accounts.manage') ||
+        hasPermission('accounting.manage') ||
+        hasPermission('reports.export'),
     },
     {
       label: 'Sales Reconcile',

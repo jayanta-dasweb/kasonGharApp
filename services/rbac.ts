@@ -10,6 +10,42 @@ export async function listUsers() {
   return data ?? [];
 }
 
+export async function setUserStatus(userId: string, status: 'ACTIVE' | 'INACTIVE') {
+  const { data, error } = await supabase
+    .from('users_master')
+    .update({ status })
+    .eq('user_id', userId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function assignUserRole(userId: string, roleId: number) {
+  // replace existing roles for simplicity
+  await supabase
+    .from('model_has_roles')
+    .delete()
+    .eq('model_id', userId)
+    .eq('model_type', 'App\\Models\\User');
+  const { error } = await supabase.from('model_has_roles').insert({
+    role_id: roleId,
+    model_type: 'App\\Models\\User',
+    model_id: userId,
+  });
+  if (error) throw error;
+}
+
+export async function getUserRoleIds(userId: string) {
+  const { data, error } = await supabase
+    .from('model_has_roles')
+    .select('role_id')
+    .eq('model_id', userId)
+    .eq('model_type', 'App\\Models\\User');
+  if (error) throw error;
+  return (data ?? []).map((r) => r.role_id);
+}
+
 export async function listRoles() {
   const { data, error } = await supabase.from('roles').select('*').order('name');
   if (error) throw error;

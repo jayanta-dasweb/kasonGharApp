@@ -31,6 +31,7 @@ export default function AppLayout() {
       <Stack.Screen name="catalog" options={{ title: 'Product Catalog' }} />
       <Stack.Screen name="masters" options={{ title: 'Masters' }} />
       <Stack.Screen name="inventory" options={{ title: 'Inventory' }} />
+      <Stack.Screen name="accounts" options={{ title: 'Accounts' }} />
       <Stack.Screen name="sales" options={{ title: 'Sales Reconcile' }} />
       <Stack.Screen name="reports" options={{ title: 'Reports' }} />
       <Stack.Screen name="rbac" options={{ title: 'Users & RBAC' }} />

@@ -1,5 +1,10 @@
 import { todayISO } from '@/lib/format';
 import { supabase } from '@/lib/supabase';
+import { postSalesInvoice } from '@/services/accounts';
+
+function locId(row: any) {
+  return row.location_id ?? row.id;
+}
 
 export async function createSalesReconciliation(input: {
   product_id: string;
@@ -37,10 +42,9 @@ export async function createSalesReconciliation(input: {
   if (custErr) throw custErr;
   if (!customerLoc) throw new Error('CUSTOMER location not found');
 
-  // Stock move — live schema uses source/dest location ids
   const movePayload: Record<string, unknown> = {
-    source_location_id: sourceLoc.location_id,
-    dest_location_id: customerLoc.location_id,
+    source_location_id: locId(sourceLoc),
+    dest_location_id: locId(customerLoc),
     quantity: input.quantity,
     state: 'DONE',
     unit_cost: input.sale_price,
@@ -48,6 +52,8 @@ export async function createSalesReconciliation(input: {
     move_date: todayISO(),
     product_id: input.product_id,
     product_code: input.product_id,
+    move_type: 'OUT',
+    partner_id: input.customer_id ?? null,
   };
 
   const { data: stockMove, error: moveErr } = await supabase
@@ -61,8 +67,8 @@ export async function createSalesReconciliation(input: {
     const retry = await supabase
       .from('stock_moves')
       .insert({
-        source_location_id: sourceLoc.location_id,
-        dest_location_id: customerLoc.location_id,
+        source_location_id: locId(sourceLoc),
+        dest_location_id: locId(customerLoc),
         quantity: input.quantity,
         state: 'DONE',
         unit_cost: input.sale_price,
@@ -72,9 +78,23 @@ export async function createSalesReconciliation(input: {
       .select()
       .single();
     if (retry.error) throw retry.error;
-    moveId = retry.data.move_id;
+    moveId = retry.data.move_id ?? retry.data.id;
   } else {
-    moveId = stockMove.move_id;
+    moveId = stockMove.move_id ?? stockMove.id;
+  }
+
+  const revenue = Number(input.quantity) * Number(input.sale_price);
+  let accountMoveId: string | number | null = null;
+  try {
+    const posted = await postSalesInvoice({
+      customer_id: input.customer_id,
+      invoice_ref: `SR-${todayISO()}`,
+      revenue,
+      created_by: input.created_by,
+    });
+    accountMoveId = posted.moveId;
+  } catch {
+    // CoA may be incomplete; stock + recon still save
   }
 
   const reconAttempts = [
@@ -82,6 +102,18 @@ export async function createSalesReconciliation(input: {
       sale_date: todayISO(),
       product_code: input.product_id,
       product_id: input.product_id,
+      salesperson_id: input.salesperson_id ?? null,
+      customer_id: input.customer_id ?? null,
+      quantity: input.quantity,
+      sale_price: input.sale_price,
+      channel: input.channel,
+      stock_move_id: moveId,
+      account_move_id: accountMoveId,
+      revenue_amount: revenue,
+    },
+    {
+      sale_date: todayISO(),
+      product_code: input.product_id,
       salesperson_id: input.salesperson_id ?? null,
       customer_id: input.customer_id ?? null,
       quantity: input.quantity,

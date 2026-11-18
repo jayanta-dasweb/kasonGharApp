@@ -1,5 +1,6 @@
 import { todayISO } from '@/lib/format';
 import { supabase } from '@/lib/supabase';
+import { postPurchaseBill } from '@/services/accounts';
 
 async function getLocationByUsage(usage: string, userId?: string | null) {
   let q = supabase
@@ -16,16 +17,108 @@ async function getLocationByUsage(usage: string, userId?: string | null) {
   return data;
 }
 
+function locId(row: any) {
+  return row.location_id ?? row.id;
+}
+
+export async function listStockQuants() {
+  const { data, error } = await supabase.from('stock_quants').select('*');
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function listRecentMoves(limit = 40) {
+  const { data, error } = await supabase
+    .from('stock_moves')
+    .select('*')
+    .order('move_date', { ascending: false })
+    .limit(limit);
+  if (error) {
+    const retry = await supabase.from('stock_moves').select('*').limit(limit);
+    if (retry.error) throw retry.error;
+    return retry.data ?? [];
+  }
+  return data ?? [];
+}
+
+export async function adjustStockQuant(input: {
+  product_id: string;
+  location_id: string | number;
+  quantity: number;
+  unit_cost?: number;
+}) {
+  const { data: existing } = await supabase
+    .from('stock_quants')
+    .select('*')
+    .eq('location_id', input.location_id)
+    .or(`product_id.eq.${input.product_id},product_code.eq.${input.product_id}`)
+    .limit(1)
+    .maybeSingle();
+
+  if (existing) {
+    const { data, error } = await supabase
+      .from('stock_quants')
+      .update({
+        quantity: input.quantity,
+        unit_cost: input.unit_cost ?? (existing as any).unit_cost ?? 0,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('quant_id', (existing as any).quant_id)
+      .select()
+      .single();
+    if (error) {
+      const retry = await supabase
+        .from('stock_quants')
+        .update({ quantity: input.quantity })
+        .eq('id', (existing as any).id)
+        .select()
+        .single();
+      if (retry.error) throw retry.error;
+      return retry.data;
+    }
+    return data;
+  }
+
+  const insertAttempts = [
+    {
+      product_id: input.product_id,
+      product_code: input.product_id,
+      location_id: input.location_id,
+      quantity: input.quantity,
+      unit_cost: input.unit_cost ?? 0,
+    },
+    {
+      product_code: input.product_id,
+      location_id: input.location_id,
+      quantity: input.quantity,
+    },
+  ];
+  let lastErr: unknown = null;
+  for (const payload of insertAttempts) {
+    const { data, error } = await supabase
+      .from('stock_quants')
+      .insert(payload)
+      .select()
+      .single();
+    if (!error) return data;
+    lastErr = error;
+  }
+  throw lastErr;
+}
+
 export async function getOfficeStockValue() {
   try {
     const office = await getLocationByUsage('INTERNAL');
     const { data, error } = await supabase
       .from('stock_quants')
-      .select('quantity')
-      .eq('location_id', office.location_id);
+      .select('quantity,unit_cost')
+      .eq('location_id', locId(office));
     if (error) throw error;
-    // Without unit cost on quants, show qty as value proxy = 0 cost basis
-    return (data ?? []).reduce((sum, row: any) => sum + Number(row.quantity ?? 0), 0);
+    return (data ?? []).reduce(
+      (sum, row: any) =>
+        sum + Number(row.quantity ?? 0) * Number(row.unit_cost ?? 0),
+      0
+    );
   } catch {
     return 0;
   }
@@ -39,21 +132,30 @@ export async function getConsignmentStockValue() {
       .eq('usage', 'SALESPERSON')
       .eq('is_active', true);
     if (locErr) throw locErr;
-    const ids = (locs ?? []).map((l) => l.location_id);
+    const ids = (locs ?? []).map((l) => locId(l));
     if (!ids.length) return 0;
     const { data, error } = await supabase
       .from('stock_quants')
-      .select('quantity')
+      .select('quantity,unit_cost')
       .in('location_id', ids);
     if (error) throw error;
-    return (data ?? []).reduce((sum, row: any) => sum + Number(row.quantity ?? 0), 0);
+    return (data ?? []).reduce(
+      (sum, row: any) =>
+        sum + Number(row.quantity ?? 0) * Number(row.unit_cost ?? 0),
+      0
+    );
   } catch {
     return 0;
   }
 }
 
-export async function getQuantsForProduct(_productId: string) {
-  return [];
+export async function getQuantsForProduct(productId: string) {
+  const { data, error } = await supabase
+    .from('stock_quants')
+    .select('*')
+    .or(`product_id.eq.${productId},product_code.eq.${productId}`);
+  if (error) throw error;
+  return data ?? [];
 }
 
 export async function getMyStock(userId: string) {
@@ -61,7 +163,7 @@ export async function getMyStock(userId: string) {
   const { data, error } = await supabase
     .from('stock_quants')
     .select('*')
-    .eq('location_id', loc.location_id);
+    .eq('location_id', locId(loc));
   if (error) throw error;
   return (data ?? []).filter((row: any) => Number(row.quantity ?? 0) > 0);
 }
@@ -85,8 +187,8 @@ export async function createVendorPurchase(input: {
 
   for (const line of input.lines) {
     const payload: Record<string, unknown> = {
-      source_location_id: supplier.location_id,
-      dest_location_id: office.location_id,
+      source_location_id: locId(supplier),
+      dest_location_id: locId(office),
       quantity: line.quantity,
       state: 'DONE',
       unit_cost: line.unit_cost,
@@ -95,6 +197,8 @@ export async function createVendorPurchase(input: {
       product_code: line.product_id,
       product_id: line.product_id,
       reference: input.invoice_number,
+      partner_id: input.vendor_id,
+      move_type: 'IN',
     };
 
     const { data, error } = await supabase
@@ -104,10 +208,9 @@ export async function createVendorPurchase(input: {
       .single();
 
     if (error) {
-      // strip unknown cols and retry minimal
       const minimal = {
-        source_location_id: supplier.location_id,
-        dest_location_id: office.location_id,
+        source_location_id: locId(supplier),
+        dest_location_id: locId(office),
         quantity: line.quantity,
         state: 'DONE',
         unit_cost: line.unit_cost,
@@ -120,8 +223,45 @@ export async function createVendorPurchase(input: {
     } else {
       moves.push(data);
     }
+
+    // Keep quants in sync for office stock visibility
+    try {
+      const { data: q } = await supabase
+        .from('stock_quants')
+        .select('*')
+        .eq('location_id', locId(office))
+        .or(`product_id.eq.${line.product_id},product_code.eq.${line.product_id}`)
+        .limit(1)
+        .maybeSingle();
+      const nextQty = Number((q as any)?.quantity ?? 0) + Number(line.quantity);
+      await adjustStockQuant({
+        product_id: line.product_id,
+        location_id: locId(office),
+        quantity: nextQty,
+        unit_cost: line.unit_cost,
+      });
+    } catch {
+      // quant sync is best-effort if schema differs
+    }
   }
-  return moves;
+
+  const billAmount = input.lines.reduce(
+    (s, l) => s + Number(l.quantity) * Number(l.unit_cost),
+    0
+  );
+  let accountMove = null;
+  try {
+    accountMove = await postPurchaseBill({
+      vendor_id: input.vendor_id,
+      invoice_number: input.invoice_number,
+      amount: billAmount,
+      created_by: input.created_by,
+    });
+  } catch {
+    // Accounting may be incomplete until CoA is seeded; stock still posts
+  }
+
+  return { moves, accountMove, billAmount };
 }
 
 export async function allocateToSalesperson(input: {
@@ -135,14 +275,15 @@ export async function allocateToSalesperson(input: {
   const { data, error } = await supabase
     .from('stock_moves')
     .insert({
-      source_location_id: office.location_id,
-      dest_location_id: spLoc.location_id,
+      source_location_id: locId(office),
+      dest_location_id: locId(spLoc),
       quantity: input.quantity,
       state: 'DONE',
       created_by: input.created_by ?? null,
       move_date: todayISO(),
       product_id: input.product_id,
       product_code: input.product_id,
+      move_type: 'ALLOCATION',
     })
     .select()
     .single();
@@ -150,8 +291,8 @@ export async function allocateToSalesperson(input: {
     const retry = await supabase
       .from('stock_moves')
       .insert({
-        source_location_id: office.location_id,
-        dest_location_id: spLoc.location_id,
+        source_location_id: locId(office),
+        dest_location_id: locId(spLoc),
         quantity: input.quantity,
         state: 'DONE',
         created_by: input.created_by ?? null,
@@ -176,14 +317,15 @@ export async function returnFromSalesperson(input: {
   const { data, error } = await supabase
     .from('stock_moves')
     .insert({
-      source_location_id: spLoc.location_id,
-      dest_location_id: office.location_id,
+      source_location_id: locId(spLoc),
+      dest_location_id: locId(office),
       quantity: input.quantity,
       state: 'DONE',
       created_by: input.created_by ?? null,
       move_date: todayISO(),
       product_id: input.product_id,
       product_code: input.product_id,
+      move_type: 'RETURN',
     })
     .select()
     .single();
@@ -191,8 +333,8 @@ export async function returnFromSalesperson(input: {
     const retry = await supabase
       .from('stock_moves')
       .insert({
-        source_location_id: spLoc.location_id,
-        dest_location_id: office.location_id,
+        source_location_id: locId(spLoc),
+        dest_location_id: locId(office),
         quantity: input.quantity,
         state: 'DONE',
         created_by: input.created_by ?? null,

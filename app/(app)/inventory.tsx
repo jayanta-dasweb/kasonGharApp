@@ -6,23 +6,29 @@ import { Input } from '@/components/ui/Input';
 import { Screen } from '@/components/ui/Screen';
 import { Toast } from '@/components/ui/Toast';
 import { colors } from '@/constants/theme';
+import { formatINR, formatNumber } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
-import { listPartners, listProducts } from '@/services/masters';
+import { listLocations, listPartners, listProducts } from '@/services/masters';
 import {
   allocateToSalesperson,
   createVendorPurchase,
+  listRecentMoves,
+  listStockQuants,
   returnFromSalesperson,
 } from '@/services/inventory';
 import { listUsers } from '@/services/rbac';
 
-type Mode = 'purchase' | 'allocate' | 'return';
+type Mode = 'stock' | 'purchase' | 'allocate' | 'return' | 'moves';
 
 export default function InventoryScreen() {
   const { profile } = useAuth();
-  const [mode, setMode] = useState<Mode>('purchase');
+  const [mode, setMode] = useState<Mode>('stock');
   const [vendors, setVendors] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
+  const [locations, setLocations] = useState<any[]>([]);
+  const [quants, setQuants] = useState<any[]>([]);
+  const [moves, setMoves] = useState<any[]>([]);
   const [vendorId, setVendorId] = useState('');
   const [invoice, setInvoice] = useState('');
   const [productId, setProductId] = useState('');
@@ -33,17 +39,24 @@ export default function InventoryScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
+  const [hideZero, setHideZero] = useState(true);
 
   const load = useCallback(async () => {
     try {
-      const [v, p, u] = await Promise.all([
+      const [v, p, u, locs, qs, mv] = await Promise.all([
         listPartners('vendor'),
         listProducts(),
         listUsers(),
+        listLocations(),
+        listStockQuants().catch(() => []),
+        listRecentMoves().catch(() => []),
       ]);
       setVendors(v);
       setProducts(p);
-      setUsers(u);
+      setUsers(u.filter((x: any) => (x.status ?? 'ACTIVE') === 'ACTIVE'));
+      setLocations(locs);
+      setQuants(qs);
+      setMoves(mv);
       if (v[0]) setVendorId(String(v[0].id ?? v[0].partner_id));
       if (p[0]) setProductId(String(p[0].product_code ?? p[0].id));
       if (u[0]) setSalespersonId(String(u[0].user_id));
@@ -61,13 +74,19 @@ export default function InventoryScreen() {
     }, [load])
   );
 
+  const locName = (id: any) => {
+    const hit = locations.find((l) => String(l.id ?? l.location_id) === String(id));
+    return hit ? `${hit.code} · ${hit.name}` : String(id ?? '—');
+  };
+
   const onSubmit = async () => {
     setSaving(true);
     setError(null);
     setOk(null);
     try {
       if (mode === 'purchase') {
-        await createVendorPurchase({
+        if (!invoice.trim()) throw new Error('Invoice number required');
+        const result = await createVendorPurchase({
           vendor_id: vendorId,
           invoice_number: invoice,
           created_by: profile?.user_id,
@@ -79,7 +98,11 @@ export default function InventoryScreen() {
             },
           ],
         });
-        setOk('Purchase posted: stock_move DONE + IN_BILL');
+        setOk(
+          result.accountMove
+            ? `Purchase + IN_BILL posted (${formatINR(result.billAmount)})`
+            : `Stock purchase posted (${formatINR(result.billAmount)}) — seed CoA for IN_BILL`
+        );
       } else if (mode === 'allocate') {
         await allocateToSalesperson({
           product_id: productId,
@@ -88,7 +111,7 @@ export default function InventoryScreen() {
           created_by: profile?.user_id,
         });
         setOk('Stock allocated to salesperson');
-      } else {
+      } else if (mode === 'return') {
         await returnFromSalesperson({
           product_id: productId,
           quantity: Number(qty),
@@ -100,6 +123,7 @@ export default function InventoryScreen() {
       setInvoice('');
       setQty('1');
       setUnitCost('');
+      await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Operation failed');
     } finally {
@@ -107,95 +131,162 @@ export default function InventoryScreen() {
     }
   };
 
+  const tabs: { key: Mode; label: string }[] = [
+    { key: 'stock', label: 'On hand' },
+    { key: 'purchase', label: 'Purchase' },
+    { key: 'allocate', label: 'Allocate' },
+    { key: 'return', label: 'Return' },
+    { key: 'moves', label: 'Moves' },
+  ];
+
   return (
-    <Screen title="Inventory" loading={loading}>
+    <Screen title="Inventory Control" loading={loading}>
       <Toast message={error} />
       <Toast message={ok} type="success" />
 
-      <View className="mb-4 flex-row gap-2">
-        {(
-          [
-            ['purchase', 'Purchase'],
-            ['allocate', 'Allocate'],
-            ['return', 'Return'],
-          ] as const
-        ).map(([key, label]) => (
+      <View className="mb-4 flex-row flex-wrap gap-2">
+        {tabs.map((t) => (
           <Pressable
-            key={key}
-            onPress={() => setMode(key)}
-            className="flex-1 items-center rounded-xl py-3"
-            style={{ backgroundColor: mode === key ? colors.royal : colors.white }}
+            key={t.key}
+            onPress={() => setMode(t.key)}
+            className="rounded-xl px-3 py-2"
+            style={{ backgroundColor: mode === t.key ? colors.royal : colors.white }}
           >
             <Text
-              className="text-sm font-semibold"
-              style={{ color: mode === key ? '#fff' : colors.muted }}
+              className="text-xs font-semibold"
+              style={{ color: mode === t.key ? '#fff' : colors.muted }}
             >
-              {label}
+              {t.label}
             </Text>
           </Pressable>
         ))}
       </View>
 
-      <View className="rounded-2xl bg-white p-4">
-        {mode === 'purchase' ? (
-          <>
-            <Text className="mb-2 text-sm font-medium text-slate-600">Vendor</Text>
-            {vendors.map((v) => {
-              const id = String(v.id ?? v.partner_id);
-              return (
-              <Pressable key={id} onPress={() => setVendorId(id)} className="mb-1 py-2">
-                <Text style={{ color: vendorId === id ? colors.royal : colors.ink }}>
-                  {vendorId === id ? '● ' : '○ '}
-                  {v.name ?? v.partner_name}
-                </Text>
-              </Pressable>
-              );
-            })}
-            <Input label="Invoice No" value={invoice} onChangeText={setInvoice} />
-            <Input
-              label="Unit Cost"
-              value={unitCost}
-              onChangeText={setUnitCost}
-              keyboardType="numeric"
-            />
-          </>
-        ) : (
-          <>
-            <Text className="mb-2 text-sm font-medium text-slate-600">Salesperson</Text>
-            {users.map((u) => {
-              const id = String(u.user_id);
-              return (
-              <Pressable
-                key={id}
-                onPress={() => setSalespersonId(id)}
-                className="mb-1 py-2"
-              >
-                <Text style={{ color: salespersonId === id ? colors.royal : colors.ink }}>
-                  {salespersonId === id ? '● ' : '○ '}
-                  {u.full_name}
-                </Text>
-              </Pressable>
-              );
-            })}
-          </>
-        )}
-
-        <Text className="mb-2 mt-2 text-sm font-medium text-slate-600">Product</Text>
-        {products.slice(0, 20).map((p) => {
-          const id = String(p.product_code ?? p.id);
-          return (
-          <Pressable key={id} onPress={() => setProductId(id)} className="mb-1 py-2">
-            <Text style={{ color: productId === id ? colors.royal : colors.ink }}>
-              {productId === id ? '● ' : '○ '}
-              {p.product_code} · {p.name ?? p.product_name}
+      {mode === 'stock' ? (
+        <View>
+          <Pressable className="mb-3" onPress={() => setHideZero((v) => !v)}>
+            <Text className="text-xs font-semibold text-maroon">
+              {hideZero ? 'Showing qty > 0 · tap to show all' : 'Showing all · tap to hide zeros'}
             </Text>
           </Pressable>
-          );
-        })}
+          {quants
+            .filter((q) => !hideZero || Number(q.quantity ?? 0) > 0)
+            .map((q, idx) => (
+              <View
+                key={String(q.quant_id ?? q.id ?? idx)}
+                className="mb-2 rounded-xl bg-white p-3"
+              >
+                <Text className="font-semibold text-ink">
+                  {q.product_code ?? q.product_id ?? 'SKU'}
+                </Text>
+                <Text className="text-xs text-slate-500">
+                  {locName(q.location_id)} · Qty {formatNumber(q.quantity)} · Cost{' '}
+                  {formatINR(q.unit_cost ?? 0)}
+                </Text>
+              </View>
+            ))}
+          {quants.length === 0 ? (
+            <Text className="text-slate-500">
+              No stock quants yet. Post a Purchase to create office stock.
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
 
-        <Input label="Quantity" value={qty} onChangeText={setQty} keyboardType="numeric" />
-        <Button label="Commit to Supabase" onPress={onSubmit} loading={saving} />
-      </View>
+      {mode === 'moves' ? (
+        <View>
+          {moves.map((m, idx) => (
+            <View key={String(m.move_id ?? m.id ?? idx)} className="mb-2 rounded-xl bg-white p-3">
+              <Text className="font-semibold text-ink">
+                {m.move_type ?? m.state ?? 'MOVE'} · Qty {formatNumber(m.quantity)}
+              </Text>
+              <Text className="text-xs text-slate-500">
+                {m.product_code ?? m.product_id ?? 'SKU'} · {m.move_date ?? m.created_at}
+              </Text>
+              <Text className="text-[10px] text-slate-400">
+                {locName(m.source_location_id)} → {locName(m.dest_location_id)}
+                {m.reference ? ` · Ref ${m.reference}` : ''}
+              </Text>
+            </View>
+          ))}
+          {moves.length === 0 ? (
+            <Text className="text-slate-500">No stock moves yet.</Text>
+          ) : null}
+        </View>
+      ) : null}
+
+      {mode === 'purchase' || mode === 'allocate' || mode === 'return' ? (
+        <View className="rounded-2xl bg-white p-4">
+          {mode === 'purchase' ? (
+            <>
+              <Text className="mb-2 text-sm font-medium text-slate-600">Vendor</Text>
+              {vendors.map((v) => {
+                const id = String(v.id ?? v.partner_id);
+                return (
+                  <Pressable key={id} onPress={() => setVendorId(id)} className="mb-1 py-2">
+                    <Text style={{ color: vendorId === id ? colors.royal : colors.ink }}>
+                      {vendorId === id ? '● ' : '○ '}
+                      {v.name ?? v.partner_name}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+              <Input label="Invoice No" value={invoice} onChangeText={setInvoice} />
+              <Input
+                label="Unit Cost"
+                value={unitCost}
+                onChangeText={setUnitCost}
+                keyboardType="numeric"
+              />
+            </>
+          ) : (
+            <>
+              <Text className="mb-2 text-sm font-medium text-slate-600">Salesperson</Text>
+              {users.map((u) => {
+                const id = String(u.user_id);
+                return (
+                  <Pressable
+                    key={id}
+                    onPress={() => setSalespersonId(id)}
+                    className="mb-1 py-2"
+                  >
+                    <Text style={{ color: salespersonId === id ? colors.royal : colors.ink }}>
+                      {salespersonId === id ? '● ' : '○ '}
+                      {u.full_name}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </>
+          )}
+
+          <Text className="mb-2 mt-2 text-sm font-medium text-slate-600">Product</Text>
+          {products.slice(0, 30).map((p) => {
+            const id = String(p.product_code ?? p.id);
+            return (
+              <Pressable key={id} onPress={() => setProductId(id)} className="mb-1 py-2">
+                <Text style={{ color: productId === id ? colors.royal : colors.ink }}>
+                  {productId === id ? '● ' : '○ '}
+                  {p.product_code} · {p.name ?? p.product_name}
+                </Text>
+              </Pressable>
+            );
+          })}
+
+          <Input label="Quantity" value={qty} onChangeText={setQty} keyboardType="numeric" />
+          <Button
+            label={
+              mode === 'purchase'
+                ? 'Post purchase + bill'
+                : mode === 'allocate'
+                  ? 'Allocate to salesperson'
+                  : 'Return to office'
+            }
+            onPress={onSubmit}
+            loading={saving}
+          />
+        </View>
+      ) : null}
     </Screen>
   );
 }

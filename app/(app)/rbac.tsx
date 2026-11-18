@@ -7,12 +7,14 @@ import { Screen } from '@/components/ui/Screen';
 import { Toast } from '@/components/ui/Toast';
 import { colors } from '@/constants/theme';
 import {
+  assignUserRole,
   listAuditLogs,
   listPermissions,
   listRolePermissions,
   listRoles,
   listUsers,
   onboardStaff,
+  setUserStatus,
   toggleRolePermission,
 } from '@/services/rbac';
 
@@ -99,14 +101,59 @@ export default function RbacScreen() {
       </View>
 
       {tab === 'users'
-        ? users.map((u) => (
-            <View key={u.id} className="mb-2 rounded-xl bg-white p-3">
-              <Text className="font-semibold text-ink">{u.full_name}</Text>
-              <Text className="text-xs text-slate-500">
-                {u.phone} · {u.status ?? 'ACTIVE'}
-              </Text>
-            </View>
-          ))
+        ? users.map((u) => {
+            const active = (u.status ?? 'ACTIVE') === 'ACTIVE';
+            return (
+              <View key={u.user_id} className="mb-2 rounded-xl bg-white p-3">
+                <Text className="font-semibold text-ink">{u.full_name}</Text>
+                <Text className="text-xs text-slate-500">
+                  {u.phone} · {u.email}
+                </Text>
+                <Text
+                  className="mt-1 text-xs font-bold"
+                  style={{ color: active ? colors.success : colors.danger }}
+                >
+                  {u.status ?? 'ACTIVE'}
+                </Text>
+                <View className="mt-2 flex-row flex-wrap gap-2">
+                  <Pressable
+                    className="rounded-lg px-3 py-2"
+                    style={{ backgroundColor: active ? '#FEE2E2' : '#D1FAE5' }}
+                    onPress={async () => {
+                      try {
+                        await setUserStatus(u.user_id, active ? 'INACTIVE' : 'ACTIVE');
+                        setOk(`${u.full_name} marked ${active ? 'INACTIVE' : 'ACTIVE'}`);
+                        await load();
+                      } catch (e) {
+                        setError(e instanceof Error ? e.message : 'Status update failed');
+                      }
+                    }}
+                  >
+                    <Text className="text-xs font-bold">
+                      {active ? 'Deactivate' : 'Activate'}
+                    </Text>
+                  </Pressable>
+                  {roles.map((r) => (
+                    <Pressable
+                      key={r.id}
+                      className="rounded-lg bg-slate-100 px-3 py-2"
+                      onPress={async () => {
+                        try {
+                          await assignUserRole(u.user_id, r.id);
+                          setOk(`${u.full_name} → role ${r.name}`);
+                          await load();
+                        } catch (e) {
+                          setError(e instanceof Error ? e.message : 'Role assign failed');
+                        }
+                      }}
+                    >
+                      <Text className="text-xs font-bold">Set {r.name}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            );
+          })
         : null}
 
       {tab === 'matrix'
