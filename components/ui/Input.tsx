@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { LucideIcon } from 'lucide-react-native';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { Eye, EyeOff } from 'lucide-react-native';
 import { colors } from '@/constants/theme';
@@ -12,6 +13,7 @@ type Props = {
   keyboardType?: 'default' | 'numeric' | 'phone-pad' | 'email-address';
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   onFocus?: () => void;
+  icon?: LucideIcon;
 };
 
 export function Input({
@@ -23,6 +25,7 @@ export function Input({
   keyboardType = 'default',
   autoCapitalize = 'none',
   onFocus,
+  icon: Icon,
 }: Props) {
   const [visible, setVisible] = useState(false);
   const isPassword = Boolean(secureTextEntry);
@@ -30,7 +33,12 @@ export function Input({
   return (
     <View className="mb-3">
       <Text className="mb-1 text-sm font-medium text-slate-600">{label}</Text>
-      <View className="min-h-[48px] flex-row items-center rounded-xl border border-slate-200 bg-white px-3">
+      <View className="min-h-[52px] flex-row items-center rounded-xl border border-slate-200 bg-white px-3">
+        {Icon ? (
+          <View style={{ marginRight: 10 }}>
+            <Icon color={colors.maroon} size={22} strokeWidth={2.2} />
+          </View>
+        ) : null}
         <TextInput
           value={value}
           onChangeText={onChangeText}

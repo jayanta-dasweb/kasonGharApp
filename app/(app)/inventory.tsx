@@ -1,7 +1,16 @@
 import { useCallback, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
+import {
+  ArrowLeftRight,
+  Boxes,
+  PackagePlus,
+  ShoppingCart,
+  Undo2,
+  UserRound,
+} from 'lucide-react-native';
 import { Button } from '@/components/ui/Button';
+import { IconTile } from '@/components/ui/IconTile';
 import { Input } from '@/components/ui/Input';
 import { Screen } from '@/components/ui/Screen';
 import { Toast } from '@/components/ui/Toast';
@@ -131,12 +140,17 @@ export default function InventoryScreen() {
     }
   };
 
-  const tabs: { key: Mode; label: string }[] = [
-    { key: 'stock', label: 'On hand' },
-    { key: 'purchase', label: 'Purchase' },
-    { key: 'allocate', label: 'Allocate' },
-    { key: 'return', label: 'Return' },
-    { key: 'moves', label: 'Moves' },
+  const tabs: {
+    key: Mode;
+    label: string;
+    icon: typeof Boxes;
+    color: string;
+  }[] = [
+    { key: 'stock', label: 'On hand', icon: Boxes, color: '#0D9488' },
+    { key: 'purchase', label: 'Purchase', icon: ShoppingCart, color: colors.royal },
+    { key: 'allocate', label: 'Give seller', icon: PackagePlus, color: colors.muga },
+    { key: 'return', label: 'Return', icon: Undo2, color: '#DB2777' },
+    { key: 'moves', label: 'History', icon: ArrowLeftRight, color: '#475569' },
   ];
 
   return (
@@ -144,21 +158,17 @@ export default function InventoryScreen() {
       <Toast message={error} />
       <Toast message={ok} type="success" />
 
-      <View className="mb-4 flex-row flex-wrap gap-2">
+      <View className="mb-4 flex-row flex-wrap justify-between">
         {tabs.map((t) => (
-          <Pressable
+          <IconTile
             key={t.key}
+            label={t.label}
+            icon={t.icon}
+            color={t.color}
+            active={mode === t.key}
             onPress={() => setMode(t.key)}
-            className="rounded-xl px-3 py-2"
-            style={{ backgroundColor: mode === t.key ? colors.royal : colors.white }}
-          >
-            <Text
-              className="text-xs font-semibold"
-              style={{ color: mode === t.key ? '#fff' : colors.muted }}
-            >
-              {t.label}
-            </Text>
-          </Pressable>
+            size="sm"
+          />
         ))}
       </View>
 
@@ -275,6 +285,13 @@ export default function InventoryScreen() {
 
           <Input label="Quantity" value={qty} onChangeText={setQty} keyboardType="numeric" />
           <Button
+            icon={
+              mode === 'purchase'
+                ? ShoppingCart
+                : mode === 'allocate'
+                  ? UserRound
+                  : Undo2
+            }
             label={
               mode === 'purchase'
                 ? 'Post purchase + bill'

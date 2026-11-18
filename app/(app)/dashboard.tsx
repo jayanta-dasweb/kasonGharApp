@@ -4,13 +4,23 @@ import { router, useFocusEffect } from 'expo-router';
 import {
   Bell,
   Boxes,
+  Calendar,
+  CalendarDays,
+  CalendarRange,
   ClipboardList,
   FileBarChart2,
+  IndianRupee,
+  Package,
   PackageSearch,
+  Search,
   Settings2,
   Shield,
+  TrendingUp,
+  Truck,
+  Wallet,
 } from 'lucide-react-native';
 import { KpiCard } from '@/components/ui/Card';
+import { IconTile } from '@/components/ui/IconTile';
 import { Input } from '@/components/ui/Input';
 import { Screen } from '@/components/ui/Screen';
 import { Toast } from '@/components/ui/Toast';
@@ -29,14 +39,22 @@ import { fetchReport, getKpiTotals } from '@/services/reports';
 
 type Period = 'day' | 'month' | 'fy';
 
-const SHORTCUTS = [
-  { label: 'Notices', href: '/(app)/notifications', icon: Bell },
-  { label: 'Catalog', href: '/(app)/catalog', icon: PackageSearch },
-  { label: 'Masters', href: '/(app)/masters', icon: Settings2 },
-  { label: 'Stock', href: '/(app)/inventory', icon: Boxes },
-  { label: 'Sales', href: '/(app)/sales', icon: ClipboardList },
-  { label: 'Reports', href: '/(app)/reports', icon: FileBarChart2 },
-  { label: 'Admin', href: '/(app)/rbac', icon: Shield },
+const ADMIN_SHORTCUTS = [
+  { label: 'Notices', href: '/(app)/notifications', icon: Bell, color: colors.muga },
+  { label: 'Catalog', href: '/(app)/catalog', icon: PackageSearch, color: colors.royal },
+  { label: 'Masters', href: '/(app)/masters', icon: Settings2, color: '#7C3AED' },
+  { label: 'Stock', href: '/(app)/inventory', icon: Boxes, color: '#0D9488' },
+  { label: 'Sales', href: '/(app)/sales', icon: ClipboardList, color: '#DB2777' },
+  { label: 'Accounts', href: '/(app)/accounts', icon: Wallet, color: '#CA8A04' },
+  { label: 'Reports', href: '/(app)/reports', icon: FileBarChart2, color: colors.royal },
+  { label: 'Admin', href: '/(app)/rbac', icon: Shield, color: '#475569' },
+] as const;
+
+const SELLER_SHORTCUTS = [
+  { label: 'Notices', href: '/(app)/notifications', icon: Bell, color: colors.muga },
+  { label: 'Catalog', href: '/(app)/catalog', icon: PackageSearch, color: colors.royal },
+  { label: 'My Sales', href: '/(app)/sales', icon: ClipboardList, color: '#DB2777' },
+  { label: 'Stock', href: '/(app)/inventory', icon: Boxes, color: '#0D9488' },
 ] as const;
 
 export default function DashboardScreen() {
@@ -84,7 +102,6 @@ export default function DashboardScreen() {
         const kpi = results[0].status === 'fulfilled' ? results[0].value : null;
         const office = results[1].status === 'fulfilled' ? results[1].value : 0;
         const consign = results[2].status === 'fulfilled' ? results[2].value : 0;
-        const report = results[3].status === 'fulfilled' ? results[3].value : [];
         const sp = results[4].status === 'fulfilled' ? results[4].value : [];
 
         setRevenue(Number(kpi?.totalRevenue ?? 0));
@@ -94,18 +111,6 @@ export default function DashboardScreen() {
         setSoldQty(
           (sp as any[]).reduce((s, r) => s + Number(r.total_sold_qty ?? 0), 0)
         );
-
-        if (report.length && period !== 'fy') {
-          const row = report[0] as any;
-          setRevenue(Number(row.total_revenue ?? row.total_sales_value ?? 0));
-          setProfit(Number(row.net_profit ?? 0));
-        }
-
-        const failed = results.find((r) => r.status === 'rejected');
-        if (failed && failed.status === 'rejected') {
-          // Soft warning only — KPIs still show zeros
-          console.warn('[dashboard]', failed.reason);
-        }
       } else if (profile?.user_id) {
         const stock = await getMyStock(profile.user_id);
         setMyStock(stock);
@@ -139,6 +144,9 @@ export default function DashboardScreen() {
     }
   };
 
+  const admin = isAdmin || roles.includes('super_admin');
+  const shortcuts = admin ? ADMIN_SHORTCUTS : SELLER_SHORTCUTS;
+
   return (
     <Screen
       title=""
@@ -165,65 +173,76 @@ export default function DashboardScreen() {
         onPress={() => router.push('/(app)/notifications')}
         style={{ borderLeftWidth: 4, borderLeftColor: colors.maroon }}
       >
-        <Text className="text-sm font-bold text-maroon">জাননী বোৰ্ড</Text>
-        <Text className="mt-1 text-xs text-slate-500">
-          {unreadNotices > 0
-            ? `${unreadNotices} new notice${unreadNotices === 1 ? '' : 's'} for you`
-            : 'Open notice board for sellers & all staff'}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <View
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: 24,
+              backgroundColor: `${colors.muga}22`,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Bell color={colors.muga} size={26} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text className="text-sm font-bold text-maroon">জাননী বোৰ্ড</Text>
+            <Text className="mt-1 text-xs text-slate-500">
+              {unreadNotices > 0
+                ? `${unreadNotices} new notice${unreadNotices === 1 ? '' : 's'} for you`
+                : 'Open notice board'}
+            </Text>
+          </View>
+        </View>
       </Pressable>
 
-      {(isAdmin || roles.includes('super_admin')) ? (
+      {admin ? (
         <>
-          <View className="mb-4 flex-row rounded-xl bg-white p-1">
-            {(['day', 'month', 'fy'] as Period[]).map((p) => (
-              <Pressable
-                key={p}
-                onPress={() => setPeriod(p)}
-                className="flex-1 items-center rounded-lg py-2"
-                style={{
-                  backgroundColor: period === p ? colors.maroon : 'transparent',
-                }}
-              >
-                <Text
-                  className="text-sm font-semibold"
-                  style={{ color: period === p ? '#fff' : colors.muted }}
-                >
-                  {p === 'day' ? 'Day' : p === 'month' ? 'Month' : 'FY'}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-
-          <View className="mb-4 flex-row flex-wrap gap-2">
-            <KpiCard title="Total Revenue" value={formatINR(revenue)} />
-            <KpiCard title="Net Profit" value={formatINR(profit)} accent="muga" />
-            <KpiCard title="Office Stock" value={formatINR(officeValue)} />
-            <KpiCard title="Consignment" value={formatINR(consignValue)} accent="muga" />
-          </View>
-
-          <Text className="mb-2 text-xs text-slate-500">
-            Sold qty (all salespeople): {formatNumber(soldQty)}
-          </Text>
-
-          <Text className="mb-2 mt-2 text-base font-bold text-ink">Modules</Text>
-          <View className="mb-4 flex-row flex-wrap gap-2">
-            {SHORTCUTS.map((item) => {
-              const Icon = item.icon;
+          <View className="mb-4 flex-row gap-2">
+            {(
+              [
+                { key: 'day' as Period, label: 'Day', icon: Calendar },
+                { key: 'month' as Period, label: 'Month', icon: CalendarDays },
+                { key: 'fy' as Period, label: 'FY', icon: CalendarRange },
+              ] as const
+            ).map((p) => {
+              const Icon = p.icon;
+              const on = period === p.key;
               return (
                 <Pressable
-                  key={item.href}
-                  onPress={() => router.push(item.href as any)}
-                  className="mb-1 w-[31%] items-center rounded-2xl bg-white px-2 py-4"
+                  key={p.key}
+                  onPress={() => setPeriod(p.key)}
+                  className="flex-1 items-center rounded-xl py-3"
+                  style={{ backgroundColor: on ? colors.maroon : colors.white }}
                 >
-                  <Icon color={colors.maroon} size={24} />
-                  <Text className="mt-2 text-center text-xs font-semibold text-ink">
-                    {item.label}
+                  <Icon color={on ? '#fff' : colors.muted} size={20} />
+                  <Text
+                    className="mt-1 text-xs font-semibold"
+                    style={{ color: on ? '#fff' : colors.muted }}
+                  >
+                    {p.label}
                   </Text>
                 </Pressable>
               );
             })}
           </View>
+
+          <View className="mb-4 flex-row flex-wrap gap-2">
+            <KpiCard title="Total Revenue" value={formatINR(revenue)} icon={IndianRupee} />
+            <KpiCard title="Net Profit" value={formatINR(profit)} accent="muga" icon={TrendingUp} />
+            <KpiCard title="Office Stock" value={formatINR(officeValue)} icon={Package} />
+            <KpiCard
+              title="Consignment"
+              value={formatINR(consignValue)}
+              accent="muga"
+              icon={Truck}
+            />
+          </View>
+
+          <Text className="mb-2 text-xs text-slate-500">
+            Sold qty (all salespeople): {formatNumber(soldQty)}
+          </Text>
         </>
       ) : (
         <>
@@ -232,6 +251,7 @@ export default function DashboardScreen() {
             value={search}
             onChangeText={onSearch}
             placeholder="Code, fabric, color…"
+            icon={Search}
           />
           {searchHits.map((p) => (
             <View key={p.product_id} className="mb-2 rounded-xl bg-white p-3">
@@ -244,22 +264,46 @@ export default function DashboardScreen() {
             </View>
           ))}
 
-          <Text className="mb-2 mt-4 text-base font-bold text-ink">
-            My Assigned Stock in Hand
-          </Text>
+          <Text className="mb-2 mt-2 text-base font-bold text-ink">My Assigned Stock</Text>
           {myStock.length === 0 ? (
-            <Text className="text-slate-500">No stock assigned.</Text>
+            <Text className="mb-3 text-slate-500">No stock assigned.</Text>
           ) : (
             myStock.map((row: any, idx) => (
-              <View key={idx} className="mb-2 rounded-xl bg-white p-3">
-                <Text className="font-semibold text-royal">
-                  Qty {row.quantity ?? row.qty}
-                </Text>
+              <View key={idx} className="mb-2 flex-row items-center rounded-xl bg-white p-3">
+                <View
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 12,
+                    backgroundColor: '#0D948818',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginRight: 10,
+                  }}
+                >
+                  <Package color="#0D9488" size={22} />
+                </View>
+                <Text className="font-semibold text-royal">Qty {row.quantity ?? row.qty}</Text>
               </View>
             ))
           )}
         </>
       )}
+
+      <Text className="mb-2 mt-2 text-base font-bold text-ink">Open with picture</Text>
+      <View className="mb-4 flex-row flex-wrap justify-between">
+        {shortcuts.map((item) => (
+          <IconTile
+            key={item.href}
+            label={item.label}
+            icon={item.icon}
+            color={item.color}
+            badge={item.href.includes('notifications') ? unreadNotices : null}
+            onPress={() => router.push(item.href as any)}
+            size="lg"
+          />
+        ))}
+      </View>
     </Screen>
   );
 }

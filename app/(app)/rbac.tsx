@@ -1,7 +1,17 @@
 import { useCallback, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
+import {
+  KeyRound,
+  Lock,
+  Phone,
+  ScrollText,
+  Shield,
+  UserPlus,
+  Users,
+} from 'lucide-react-native';
 import { Button } from '@/components/ui/Button';
+import { IconTile } from '@/components/ui/IconTile';
 import { Input } from '@/components/ui/Input';
 import { Screen } from '@/components/ui/Screen';
 import { Toast } from '@/components/ui/Toast';
@@ -75,28 +85,24 @@ export default function RbacScreen() {
       <Toast message={error} />
       <Toast message={ok} type="success" />
 
-      <View className="mb-4 flex-row flex-wrap gap-2">
+      <View className="mb-4 flex-row flex-wrap justify-between">
         {(
           [
-            ['users', 'Users'],
-            ['matrix', 'Permissions'],
-            ['onboard', 'Onboard'],
-            ['audit', 'Audit'],
+            ['users', 'Users', Users, colors.royal],
+            ['matrix', 'Permissions', KeyRound, '#7C3AED'],
+            ['onboard', 'Add staff', UserPlus, colors.muga],
+            ['audit', 'Audit', ScrollText, '#475569'],
           ] as const
-        ).map(([key, label]) => (
-          <Pressable
+        ).map(([key, label, Icon, color]) => (
+          <IconTile
             key={key}
+            label={label}
+            icon={Icon}
+            color={color}
+            active={tab === key}
+            size="sm"
             onPress={() => setTab(key)}
-            className="rounded-full px-3 py-2"
-            style={{ backgroundColor: tab === key ? colors.royal : colors.white }}
-          >
-            <Text
-              className="text-xs font-semibold"
-              style={{ color: tab === key ? '#fff' : colors.muted }}
-            >
-              {label}
-            </Text>
-          </Pressable>
+          />
         ))}
       </View>
 
@@ -189,22 +195,37 @@ export default function RbacScreen() {
 
       {tab === 'onboard' ? (
         <View className="rounded-2xl bg-white p-4">
-          <Input label="Full Name" value={fullName} onChangeText={setFullName} />
+          <Input
+            label="Full Name"
+            value={fullName}
+            onChangeText={setFullName}
+            icon={Users}
+          />
           <Input
             label="Phone"
             value={phone}
             onChangeText={setPhone}
             keyboardType="phone-pad"
+            icon={Phone}
           />
           <Input
             label="Password"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
+            icon={Lock}
           />
           <Text className="mb-2 text-sm font-medium text-slate-600">Role</Text>
           {roles.map((r) => (
-            <Pressable key={r.id} onPress={() => setRoleId(r.id)} className="mb-1 py-2">
+            <Pressable
+              key={r.id}
+              onPress={() => setRoleId(r.id)}
+              className="mb-1 flex-row items-center gap-2 py-2"
+            >
+              <Shield
+                size={18}
+                color={roleId === r.id ? colors.royal : colors.muted}
+              />
               <Text style={{ color: roleId === r.id ? colors.royal : colors.ink }}>
                 {roleId === r.id ? '● ' : '○ '}
                 {r.name}
@@ -212,6 +233,7 @@ export default function RbacScreen() {
             </Pressable>
           ))}
           <Button
+            icon={UserPlus}
             label="Create Staff User"
             loading={saving}
             onPress={async () => {

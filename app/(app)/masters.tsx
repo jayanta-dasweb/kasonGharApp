@@ -1,7 +1,25 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
+import type { LucideIcon } from 'lucide-react-native';
+import {
+  BookOpen,
+  CalendarRange,
+  Layers,
+  MapPin,
+  Package,
+  Pencil,
+  Power,
+  Receipt,
+  Save,
+  Shirt,
+  Sparkles,
+  Trash2,
+  Users,
+  Wallet,
+} from 'lucide-react-native';
 import { Button } from '@/components/ui/Button';
+import { IconTile } from '@/components/ui/IconTile';
 import { Input } from '@/components/ui/Input';
 import { Screen } from '@/components/ui/Screen';
 import { Toast } from '@/components/ui/Toast';
@@ -58,18 +76,23 @@ import {
   updateWeave,
 } from '@/services/masters';
 
-const SECTIONS = [
-  { key: 'FY', label: 'Financial Year' },
-  { key: 'Categories', label: 'Categories' },
-  { key: 'Fabrics', label: 'Fabrics' },
-  { key: 'Weaves', label: 'Weaves' },
-  { key: 'Partners', label: 'Partners' },
-  { key: 'Products', label: 'Products' },
-  { key: 'Locations', label: 'Locations' },
-  { key: 'Accounts', label: 'Accounts' },
-  { key: 'Journals', label: 'Journals' },
-  { key: 'Expenses', label: 'Expenses' },
-] as const;
+const SECTIONS: {
+  key: string;
+  label: string;
+  icon: LucideIcon;
+  color: string;
+}[] = [
+  { key: 'FY', label: 'Year', icon: CalendarRange, color: colors.maroon },
+  { key: 'Categories', label: 'Category', icon: Layers, color: '#7C3AED' },
+  { key: 'Fabrics', label: 'Fabric', icon: Shirt, color: '#DB2777' },
+  { key: 'Weaves', label: 'Weave', icon: Sparkles, color: colors.muga },
+  { key: 'Partners', label: 'Partner', icon: Users, color: colors.royal },
+  { key: 'Products', label: 'Product', icon: Package, color: '#0D9488' },
+  { key: 'Locations', label: 'Location', icon: MapPin, color: '#EA580C' },
+  { key: 'Accounts', label: 'Account', icon: Wallet, color: '#CA8A04' },
+  { key: 'Journals', label: 'Journal', icon: BookOpen, color: '#475569' },
+  { key: 'Expenses', label: 'Expense', icon: Receipt, color: colors.danger },
+];
 
 type Tab = (typeof SECTIONS)[number]['key'];
 
@@ -97,25 +120,32 @@ function ActionBtn({
   label,
   onPress,
   tone = 'default',
+  icon: Icon,
 }: {
   label: string;
   onPress: () => void;
   tone?: 'default' | 'danger' | 'ok';
+  icon?: LucideIcon;
 }) {
   const bg = tone === 'danger' ? '#FEE2E2' : tone === 'ok' ? '#D1FAE5' : '#F1F5F9';
   const color = tone === 'danger' ? '#DC2626' : tone === 'ok' ? '#059669' : colors.ink;
   return (
     <Pressable
       onPress={onPress}
+      accessibilityLabel={label}
       style={{
         backgroundColor: bg,
-        borderRadius: 8,
+        borderRadius: 10,
         paddingHorizontal: 10,
         paddingVertical: 8,
         marginRight: 8,
         marginTop: 8,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
       }}
     >
+      {Icon ? <Icon color={color} size={16} /> : null}
       <Text style={{ color, fontSize: 12, fontWeight: '700' }}>{label}</Text>
     </Pressable>
   );
@@ -537,14 +567,17 @@ export default function MastersScreen() {
         Full control: Create · Edit · Activate/Deactivate · Delete. Run erp_masters_enrichment.sql once for extra columns.
       </Text>
 
-      <View className="mb-3 flex-row flex-wrap">
+      <View className="mb-3 flex-row flex-wrap justify-between">
         {SECTIONS.map((s) => (
-          <Chip
+          <IconTile
             key={s.key}
             label={s.label}
+            icon={s.icon}
+            color={s.color}
             active={tab === s.key}
+            size="sm"
             onPress={() => {
-              setTab(s.key);
+              setTab(s.key as Tab);
               resetForm();
               setLoading(true);
               setOk(null);
@@ -686,6 +719,7 @@ export default function MastersScreen() {
         ) : null}
 
         <Button
+          icon={Save}
           label={editingId ? `Update ${section.label}` : `Create ${section.label}`}
           onPress={onSave}
           loading={saving}
@@ -743,20 +777,27 @@ export default function MastersScreen() {
                 </Text>
               ) : null}
               <View className="flex-row flex-wrap">
-                <ActionBtn label="Edit" onPress={() => beginEdit(item)} />
+                <ActionBtn icon={Pencil} label="Edit" onPress={() => beginEdit(item)} />
                 {tab !== 'FY' ? (
                   <ActionBtn
+                    icon={Power}
                     label={item.is_active === false ? 'Activate' : 'Deactivate'}
                     tone={item.is_active === false ? 'ok' : 'default'}
                     onPress={() => toggleActive(item)}
                   />
                 ) : (
                   <ActionBtn
+                    icon={Power}
                     label={item.is_closed ? 'Re-open FY' : 'Close FY'}
                     onPress={() => toggleActive(item)}
                   />
                 )}
-                <ActionBtn label="Delete" tone="danger" onPress={() => confirmDelete(item)} />
+                <ActionBtn
+                  icon={Trash2}
+                  label="Delete"
+                  tone="danger"
+                  onPress={() => confirmDelete(item)}
+                />
               </View>
             </View>
           );

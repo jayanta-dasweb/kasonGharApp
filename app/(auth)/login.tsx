@@ -8,6 +8,7 @@ import {
   View,
   type ScrollView as ScrollViewType,
 } from 'react-native';
+import { Lock, LogIn, Phone } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { KasonLogo } from '@/components/logo/KasonLogo';
 import { Button } from '@/components/ui/Button';
@@ -87,6 +88,7 @@ export default function LoginScreen() {
             placeholder="10-digit mobile"
             keyboardType="phone-pad"
             onFocus={scrollFieldIntoView}
+            icon={Phone}
           />
           <Input
             label="Password"
@@ -95,10 +97,11 @@ export default function LoginScreen() {
             placeholder="Password"
             secureTextEntry
             onFocus={scrollFieldIntoView}
+            icon={Lock}
           />
 
           <View className="mt-2">
-            <Button label="Sign In" onPress={onSubmit} loading={loading} />
+            <Button icon={LogIn} label="Sign In" onPress={onSubmit} loading={loading} />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

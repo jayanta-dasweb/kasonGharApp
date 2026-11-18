@@ -1,6 +1,13 @@
 import { useCallback, useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 import { useFocusEffect, router } from 'expo-router';
+import {
+  Bell,
+  CheckCheck,
+  Megaphone,
+  PlusCircle,
+  Trash2,
+} from 'lucide-react-native';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Screen } from '@/components/ui/Screen';
@@ -108,7 +115,7 @@ export default function NotificationsScreen() {
       <View className="mb-4 flex-row flex-wrap gap-2">
         {unread > 0 ? (
           <Pressable
-            className="rounded-xl px-3 py-2"
+            className="flex-row items-center gap-2 rounded-xl px-3 py-3"
             style={{ backgroundColor: colors.maroon }}
             onPress={async () => {
               if (!profile?.user_id) return;
@@ -121,6 +128,7 @@ export default function NotificationsScreen() {
               }
             }}
           >
+            <CheckCheck color="#fff" size={18} />
             <Text className="text-xs font-bold text-white">
               Mark all read ({unread})
             </Text>
@@ -128,9 +136,14 @@ export default function NotificationsScreen() {
         ) : null}
         {canPost ? (
           <Pressable
-            className="rounded-xl bg-white px-3 py-2"
+            className="flex-row items-center gap-2 rounded-xl bg-white px-3 py-3"
             onPress={() => setCompose((v) => !v)}
           >
+            {compose ? (
+              <Trash2 color={colors.maroon} size={18} />
+            ) : (
+              <PlusCircle color={colors.maroon} size={18} />
+            )}
             <Text className="text-xs font-bold text-maroon">
               {compose ? 'Close compose' : 'Post notice'}
             </Text>
@@ -140,7 +153,10 @@ export default function NotificationsScreen() {
 
       {compose && canPost ? (
         <View className="mb-4 rounded-2xl bg-white p-4">
-          <Text className="mb-2 text-sm font-bold text-maroon">New notice</Text>
+          <View className="mb-2 flex-row items-center gap-2">
+            <Megaphone color={colors.maroon} size={20} />
+            <Text className="text-sm font-bold text-maroon">New notice</Text>
+          </View>
           <Input label="Title" value={title} onChangeText={setTitle} />
           <Input label="Message" value={body} onChangeText={setBody} />
 
@@ -187,6 +203,7 @@ export default function NotificationsScreen() {
           </View>
 
           <Button
+            icon={Bell}
             label="Publish to board"
             loading={saving}
             onPress={async () => {

@@ -1,7 +1,9 @@
 import { useCallback, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
+import { Building2, CheckCircle2, Store } from 'lucide-react-native';
 import { Button } from '@/components/ui/Button';
+import { IconTile } from '@/components/ui/IconTile';
 import { Input } from '@/components/ui/Input';
 import { Screen } from '@/components/ui/Screen';
 import { Toast } from '@/components/ui/Toast';
@@ -83,22 +85,23 @@ export default function SalesScreen() {
       <Toast message={error} />
       <Toast message={ok} type="success" />
 
-      <View className="mb-4 flex-row gap-2">
-        {(['consignment', 'office'] as const).map((c) => (
-          <Pressable
-            key={c}
-            onPress={() => setChannel(c)}
-            className="flex-1 items-center rounded-xl py-3"
-            style={{ backgroundColor: channel === c ? colors.muga : colors.white }}
-          >
-            <Text
-              className="text-sm font-semibold capitalize"
-              style={{ color: channel === c ? '#fff' : colors.muted }}
-            >
-              {c}
-            </Text>
-          </Pressable>
-        ))}
+      <View className="mb-4 flex-row justify-between gap-2">
+        <IconTile
+          label="Seller sale"
+          icon={Store}
+          color={colors.muga}
+          active={channel === 'consignment'}
+          onPress={() => setChannel('consignment')}
+          size="lg"
+        />
+        <IconTile
+          label="Office sale"
+          icon={Building2}
+          color={colors.royal}
+          active={channel === 'office'}
+          onPress={() => setChannel('office')}
+          size="lg"
+        />
       </View>
 
       <View className="rounded-2xl bg-white p-4">
@@ -156,7 +159,12 @@ export default function SalesScreen() {
           onChangeText={setPrice}
           keyboardType="numeric"
         />
-        <Button label="Post Sale & Ledger" onPress={onSubmit} loading={saving} />
+        <Button
+          icon={CheckCircle2}
+          label="Post Sale & Ledger"
+          onPress={onSubmit}
+          loading={saving}
+        />
       </View>
     </Screen>
   );

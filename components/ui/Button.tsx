@@ -1,4 +1,5 @@
-import { ActivityIndicator, Pressable, Text } from 'react-native';
+import type { LucideIcon } from 'lucide-react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { colors } from '@/constants/theme';
 
 type Props = {
@@ -7,6 +8,7 @@ type Props = {
   loading?: boolean;
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
   disabled?: boolean;
+  icon?: LucideIcon;
 };
 
 export function Button({
@@ -15,6 +17,7 @@ export function Button({
   loading,
   variant = 'primary',
   disabled,
+  icon: Icon,
 }: Props) {
   const bg =
     variant === 'primary'
@@ -31,7 +34,9 @@ export function Button({
     <Pressable
       onPress={onPress}
       disabled={disabled || loading}
-      className="min-h-[48px] items-center justify-center rounded-xl px-4"
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      className="min-h-[52px] items-center justify-center rounded-xl px-4"
       style={{
         backgroundColor: bg,
         opacity: disabled || loading ? 0.6 : 1,
@@ -42,9 +47,12 @@ export function Button({
       {loading ? (
         <ActivityIndicator color={textColor} />
       ) : (
-        <Text className="text-base font-semibold" style={{ color: textColor }}>
-          {label}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          {Icon ? <Icon color={textColor} size={22} strokeWidth={2.25} /> : null}
+          <Text className="text-base font-semibold" style={{ color: textColor }}>
+            {label}
+          </Text>
+        </View>
       )}
     </Pressable>
   );

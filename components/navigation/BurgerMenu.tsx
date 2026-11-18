@@ -31,6 +31,7 @@ type Item = {
   label: string;
   href: string;
   icon: typeof LayoutDashboard;
+  color: string;
   show?: boolean;
 };
 
@@ -40,30 +41,46 @@ export function BurgerButton() {
   const { profile, roles, isAdmin, hasPermission, signOut } = useAuth();
 
   const items: Item[] = [
-    { label: 'Dashboard', href: '/(app)/dashboard', icon: LayoutDashboard, show: true },
     {
-      label: 'জাননী বোৰ্ড / Notices',
-      href: '/(app)/notifications',
-      icon: Bell,
+      label: 'Dashboard',
+      href: '/(app)/dashboard',
+      icon: LayoutDashboard,
+      color: colors.maroon,
       show: true,
     },
-    { label: 'Product Catalog', href: '/(app)/catalog', icon: PackageSearch, show: true },
+    {
+      label: 'জাননী বোৰ্ড',
+      href: '/(app)/notifications',
+      icon: Bell,
+      color: colors.muga,
+      show: true,
+    },
+    {
+      label: 'Product Catalog',
+      href: '/(app)/catalog',
+      icon: PackageSearch,
+      color: colors.royal,
+      show: true,
+    },
     {
       label: 'Masters',
       href: '/(app)/masters',
       icon: Settings2,
+      color: '#7C3AED',
       show: isAdmin || hasPermission('masters.manage') || hasPermission('products.manage'),
     },
     {
       label: 'Inventory / Stock',
       href: '/(app)/inventory',
       icon: Boxes,
+      color: '#0D9488',
       show: isAdmin || hasPermission('inventory.manage'),
     },
     {
       label: 'Accounts Ledger',
       href: '/(app)/accounts',
       icon: Wallet,
+      color: '#CA8A04',
       show:
         isAdmin ||
         hasPermission('accounts.manage') ||
@@ -74,18 +91,21 @@ export function BurgerButton() {
       label: 'Sales Reconcile',
       href: '/(app)/sales',
       icon: ClipboardList,
+      color: '#DB2777',
       show: isAdmin || hasPermission('sales.reconcile'),
     },
     {
       label: 'Reports',
       href: '/(app)/reports',
       icon: FileBarChart2,
+      color: colors.royal,
       show: isAdmin || hasPermission('reports.export'),
     },
     {
       label: 'Users & RBAC',
       href: '/(app)/rbac',
       icon: Shield,
+      color: '#475569',
       show:
         isAdmin ||
         hasPermission('users.manage') ||
@@ -102,14 +122,27 @@ export function BurgerButton() {
         style={{ padding: 8 }}
         accessibilityLabel="Open menu"
       >
-        <Menu color={colors.maroon} size={26} />
+        <View
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 12,
+            backgroundColor: '#fff',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderWidth: 1,
+            borderColor: colors.border,
+          }}
+        >
+          <Menu color={colors.maroon} size={24} />
+        </View>
       </Pressable>
 
       <Modal visible={open} animationType="fade" transparent onRequestClose={() => setOpen(false)}>
         <View style={{ flex: 1, flexDirection: 'row' }}>
           <View
             style={{
-              width: 300,
+              width: 310,
               backgroundColor: colors.cream,
               paddingTop: insets.top,
               paddingBottom: insets.bottom,
@@ -127,7 +160,7 @@ export function BurgerButton() {
             >
               <Image
                 source={require('../../assets/images/kason-ghar-logo.jpg')}
-                style={{ width: 48, height: 48, borderRadius: 24 }}
+                style={{ width: 52, height: 52, borderRadius: 26 }}
               />
               <View style={{ flex: 1 }}>
                 <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>
@@ -140,8 +173,8 @@ export function BurgerButton() {
                   {(roles[0] ?? 'user').replace('_', ' ').toUpperCase()}
                 </Text>
               </View>
-              <Pressable onPress={() => setOpen(false)}>
-                <X color="#fff" size={22} />
+              <Pressable onPress={() => setOpen(false)} hitSlop={10}>
+                <X color="#fff" size={24} />
               </Pressable>
             </View>
 
@@ -160,16 +193,29 @@ export function BurgerButton() {
                       style={{
                         flexDirection: 'row',
                         alignItems: 'center',
-                        gap: 12,
-                        paddingVertical: 14,
+                        gap: 14,
+                        paddingVertical: 12,
                         paddingHorizontal: 12,
-                        borderRadius: 12,
-                        marginBottom: 4,
+                        borderRadius: 16,
+                        marginBottom: 8,
                         backgroundColor: '#fff',
+                        borderWidth: 1,
+                        borderColor: colors.border,
                       }}
                     >
-                      <Icon color={colors.maroon} size={22} />
-                      <Text style={{ fontSize: 15, fontWeight: '600', color: colors.ink }}>
+                      <View
+                        style={{
+                          width: 48,
+                          height: 48,
+                          borderRadius: 16,
+                          backgroundColor: `${item.color}18`,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Icon color={item.color} size={26} strokeWidth={2.25} />
+                      </View>
+                      <Text style={{ flex: 1, fontSize: 15, fontWeight: '700', color: colors.ink }}>
                         {item.label}
                       </Text>
                     </Pressable>
@@ -187,19 +233,23 @@ export function BurgerButton() {
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
+                  justifyContent: 'center',
                   gap: 10,
                   backgroundColor: colors.maroon,
-                  borderRadius: 12,
-                  paddingVertical: 12,
+                  borderRadius: 14,
+                  paddingVertical: 14,
                   paddingHorizontal: 14,
                 }}
               >
-                <LogOut color="#fff" size={20} />
-                <Text style={{ color: '#fff', fontWeight: '700' }}>Sign out</Text>
+                <LogOut color="#fff" size={22} />
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Sign out</Text>
               </Pressable>
             </View>
           </View>
-          <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' }} onPress={() => setOpen(false)} />
+          <Pressable
+            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' }}
+            onPress={() => setOpen(false)}
+          />
         </View>
       </Modal>
     </>

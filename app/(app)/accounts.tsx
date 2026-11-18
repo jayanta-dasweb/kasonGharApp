@@ -1,7 +1,9 @@
 import { useCallback, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
+import { BookMarked, Receipt, Send } from 'lucide-react-native';
 import { Button } from '@/components/ui/Button';
+import { IconTile } from '@/components/ui/IconTile';
 import { Input } from '@/components/ui/Input';
 import { Screen } from '@/components/ui/Screen';
 import { Toast } from '@/components/ui/Toast';
@@ -95,27 +97,23 @@ export default function AccountsScreen() {
         </Text>
       </View>
 
-      <View className="mb-4 flex-row gap-2">
-        {(
-          [
-            ['ledger', 'Ledger'],
-            ['expense', 'Post expense'],
-          ] as const
-        ).map(([key, label]) => (
-          <Pressable
-            key={key}
-            onPress={() => setMode(key)}
-            className="flex-1 items-center rounded-xl py-3"
-            style={{ backgroundColor: mode === key ? colors.maroon : colors.white }}
-          >
-            <Text
-              className="text-sm font-semibold"
-              style={{ color: mode === key ? '#fff' : colors.muted }}
-            >
-              {label}
-            </Text>
-          </Pressable>
-        ))}
+      <View className="mb-4 flex-row justify-between gap-2">
+        <IconTile
+          label="Ledger"
+          icon={BookMarked}
+          color={colors.maroon}
+          active={mode === 'ledger'}
+          onPress={() => setMode('ledger')}
+          size="lg"
+        />
+        <IconTile
+          label="Post expense"
+          icon={Receipt}
+          color={colors.muga}
+          active={mode === 'expense'}
+          onPress={() => setMode('expense')}
+          size="lg"
+        />
       </View>
 
       {mode === 'expense' ? (
@@ -170,6 +168,7 @@ export default function AccountsScreen() {
             keyboardType="numeric"
           />
           <Button
+            icon={Send}
             label="Post expense entry"
             loading={saving}
             onPress={async () => {
