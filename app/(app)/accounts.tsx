@@ -3,9 +3,9 @@ import { Pressable, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { BookMarked, Receipt, Send } from 'lucide-react-native';
 import { Button } from '@/components/ui/Button';
-import { IconTile } from '@/components/ui/IconTile';
 import { Input } from '@/components/ui/Input';
 import { Screen } from '@/components/ui/Screen';
+import { SegmentStrip } from '@/components/ui/SegmentStrip';
 import { Toast } from '@/components/ui/Toast';
 import { colors } from '@/constants/theme';
 import { formatINR } from '@/lib/format';
@@ -97,24 +97,15 @@ export default function AccountsScreen() {
         </Text>
       </View>
 
-      <View className="mb-4 flex-row justify-between gap-2">
-        <IconTile
-          label="Ledger"
-          icon={BookMarked}
-          color={colors.maroon}
-          active={mode === 'ledger'}
-          onPress={() => setMode('ledger')}
-          size="lg"
-        />
-        <IconTile
-          label="Post expense"
-          icon={Receipt}
-          color={colors.muga}
-          active={mode === 'expense'}
-          onPress={() => setMode('expense')}
-          size="lg"
-        />
-      </View>
+      <SegmentStrip
+        value={mode}
+        onChange={setMode}
+        equal
+        items={[
+          { key: 'ledger', label: 'Ledger', icon: BookMarked },
+          { key: 'expense', label: 'Post expense', icon: Receipt },
+        ]}
+      />
 
       {mode === 'expense' ? (
         <View className="rounded-2xl bg-white p-4">

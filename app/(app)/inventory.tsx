@@ -10,9 +10,9 @@ import {
   UserRound,
 } from 'lucide-react-native';
 import { Button } from '@/components/ui/Button';
-import { IconTile } from '@/components/ui/IconTile';
 import { Input } from '@/components/ui/Input';
 import { Screen } from '@/components/ui/Screen';
+import { SegmentStrip } from '@/components/ui/SegmentStrip';
 import { Toast } from '@/components/ui/Toast';
 import { colors } from '@/constants/theme';
 import { formatINR, formatNumber } from '@/lib/format';
@@ -140,37 +140,22 @@ export default function InventoryScreen() {
     }
   };
 
-  const tabs: {
-    key: Mode;
-    label: string;
-    icon: typeof Boxes;
-    color: string;
-  }[] = [
-    { key: 'stock', label: 'On hand', icon: Boxes, color: '#0D9488' },
-    { key: 'purchase', label: 'Purchase', icon: ShoppingCart, color: colors.royal },
-    { key: 'allocate', label: 'Give seller', icon: PackagePlus, color: colors.muga },
-    { key: 'return', label: 'Return', icon: Undo2, color: '#DB2777' },
-    { key: 'moves', label: 'History', icon: ArrowLeftRight, color: '#475569' },
-  ];
-
   return (
     <Screen title="Inventory Control" loading={loading}>
       <Toast message={error} />
       <Toast message={ok} type="success" />
 
-      <View className="mb-4 flex-row flex-wrap justify-between">
-        {tabs.map((t) => (
-          <IconTile
-            key={t.key}
-            label={t.label}
-            icon={t.icon}
-            color={t.color}
-            active={mode === t.key}
-            onPress={() => setMode(t.key)}
-            size="sm"
-          />
-        ))}
-      </View>
+      <SegmentStrip
+        value={mode}
+        onChange={setMode}
+        items={[
+          { key: 'stock', label: 'On hand', icon: Boxes },
+          { key: 'purchase', label: 'Purchase', icon: ShoppingCart },
+          { key: 'allocate', label: 'Give seller', icon: PackagePlus },
+          { key: 'return', label: 'Return', icon: Undo2 },
+          { key: 'moves', label: 'History', icon: ArrowLeftRight },
+        ]}
+      />
 
       {mode === 'stock' ? (
         <View>

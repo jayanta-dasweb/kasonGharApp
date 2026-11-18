@@ -11,9 +11,9 @@ import {
   Users,
 } from 'lucide-react-native';
 import { Button } from '@/components/ui/Button';
-import { IconTile } from '@/components/ui/IconTile';
 import { Input } from '@/components/ui/Input';
 import { Screen } from '@/components/ui/Screen';
+import { SegmentStrip } from '@/components/ui/SegmentStrip';
 import { Toast } from '@/components/ui/Toast';
 import { colors } from '@/constants/theme';
 import {
@@ -85,26 +85,16 @@ export default function RbacScreen() {
       <Toast message={error} />
       <Toast message={ok} type="success" />
 
-      <View className="mb-4 flex-row flex-wrap justify-between">
-        {(
-          [
-            ['users', 'Users', Users, colors.royal],
-            ['matrix', 'Permissions', KeyRound, '#7C3AED'],
-            ['onboard', 'Add staff', UserPlus, colors.muga],
-            ['audit', 'Audit', ScrollText, '#475569'],
-          ] as const
-        ).map(([key, label, Icon, color]) => (
-          <IconTile
-            key={key}
-            label={label}
-            icon={Icon}
-            color={color}
-            active={tab === key}
-            size="sm"
-            onPress={() => setTab(key)}
-          />
-        ))}
-      </View>
+      <SegmentStrip
+        value={tab}
+        onChange={setTab}
+        items={[
+          { key: 'users', label: 'Users', icon: Users },
+          { key: 'matrix', label: 'Permissions', icon: KeyRound },
+          { key: 'onboard', label: 'Add staff', icon: UserPlus },
+          { key: 'audit', label: 'Audit', icon: ScrollText },
+        ]}
+      />
 
       {tab === 'users'
         ? users.map((u) => {

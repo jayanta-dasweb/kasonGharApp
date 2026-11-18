@@ -16,6 +16,6 @@ export default function SplashGate() {
     return <AnimatedSplash onFinished={onSplashFinished} />;
   }
 
-  if (session) return <Redirect href="/(app)/dashboard" />;
+  if (session) return <Redirect href="/(app)/(tabs)/dashboard" />;
   return <Redirect href="/(auth)/login" />;
 }

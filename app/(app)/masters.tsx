@@ -19,8 +19,8 @@ import {
   Wallet,
 } from 'lucide-react-native';
 import { Button } from '@/components/ui/Button';
-import { IconTile } from '@/components/ui/IconTile';
 import { Input } from '@/components/ui/Input';
+import { NavRow } from '@/components/ui/NavRow';
 import { Screen } from '@/components/ui/Screen';
 import { Toast } from '@/components/ui/Toast';
 import { colors } from '@/constants/theme';
@@ -135,18 +135,19 @@ function ActionBtn({
       accessibilityLabel={label}
       style={{
         backgroundColor: bg,
-        borderRadius: 10,
-        paddingHorizontal: 10,
-        paddingVertical: 8,
+        borderRadius: 12,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
         marginRight: 8,
         marginTop: 8,
+        minHeight: 48,
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
+        gap: 8,
       }}
     >
-      {Icon ? <Icon color={color} size={16} /> : null}
-      <Text style={{ color, fontSize: 12, fontWeight: '700' }}>{label}</Text>
+      {Icon ? <Icon color={color} size={18} /> : null}
+      <Text style={{ color, fontSize: 13, fontWeight: '700' }}>{label}</Text>
     </Pressable>
   );
 }
@@ -567,25 +568,24 @@ export default function MastersScreen() {
         Full control: Create · Edit · Activate/Deactivate · Delete. Run erp_masters_enrichment.sql once for extra columns.
       </Text>
 
-      <View className="mb-3 flex-row flex-wrap justify-between">
-        {SECTIONS.map((s) => (
-          <IconTile
-            key={s.key}
-            label={s.label}
-            icon={s.icon}
-            color={s.color}
-            active={tab === s.key}
-            size="sm"
-            onPress={() => {
-              setTab(s.key as Tab);
-              resetForm();
-              setLoading(true);
-              setOk(null);
-              setError(null);
-            }}
-          />
-        ))}
-      </View>
+      <Text className="mb-2 text-sm font-bold text-ink">Choose master type</Text>
+      {SECTIONS.map((s) => (
+        <NavRow
+          key={s.key}
+          label={s.label}
+          subtitle={tab === s.key ? 'Selected · edit below' : 'Tap to open'}
+          icon={s.icon}
+          color={s.color}
+          active={tab === s.key}
+          onPress={() => {
+            setTab(s.key as Tab);
+            resetForm();
+            setLoading(true);
+            setOk(null);
+            setError(null);
+          }}
+        />
+      ))}
 
       <View className="mb-3 rounded-2xl bg-white p-4">
         <View className="mb-2 flex-row items-center justify-between">

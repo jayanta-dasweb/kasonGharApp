@@ -3,9 +3,9 @@ import { Pressable, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { Building2, CheckCircle2, Store } from 'lucide-react-native';
 import { Button } from '@/components/ui/Button';
-import { IconTile } from '@/components/ui/IconTile';
 import { Input } from '@/components/ui/Input';
 import { Screen } from '@/components/ui/Screen';
+import { SegmentStrip } from '@/components/ui/SegmentStrip';
 import { Toast } from '@/components/ui/Toast';
 import { colors } from '@/constants/theme';
 import { useAuth } from '@/lib/auth';
@@ -85,24 +85,15 @@ export default function SalesScreen() {
       <Toast message={error} />
       <Toast message={ok} type="success" />
 
-      <View className="mb-4 flex-row justify-between gap-2">
-        <IconTile
-          label="Seller sale"
-          icon={Store}
-          color={colors.muga}
-          active={channel === 'consignment'}
-          onPress={() => setChannel('consignment')}
-          size="lg"
-        />
-        <IconTile
-          label="Office sale"
-          icon={Building2}
-          color={colors.royal}
-          active={channel === 'office'}
-          onPress={() => setChannel('office')}
-          size="lg"
-        />
-      </View>
+      <SegmentStrip
+        value={channel}
+        onChange={setChannel}
+        equal
+        items={[
+          { key: 'consignment', label: 'Seller sale', icon: Store },
+          { key: 'office', label: 'Office sale', icon: Building2 },
+        ]}
+      />
 
       <View className="rounded-2xl bg-white p-4">
         <Text className="mb-2 text-sm font-medium text-slate-600">Product</Text>

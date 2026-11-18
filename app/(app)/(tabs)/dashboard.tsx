@@ -20,9 +20,10 @@ import {
   Wallet,
 } from 'lucide-react-native';
 import { KpiCard } from '@/components/ui/Card';
-import { IconTile } from '@/components/ui/IconTile';
 import { Input } from '@/components/ui/Input';
+import { NavRow } from '@/components/ui/NavRow';
 import { Screen } from '@/components/ui/Screen';
+import { SegmentStrip } from '@/components/ui/SegmentStrip';
 import { Toast } from '@/components/ui/Toast';
 import { brand } from '@/constants/brand';
 import { colors } from '@/constants/theme';
@@ -39,26 +40,8 @@ import { fetchReport, getKpiTotals } from '@/services/reports';
 
 type Period = 'day' | 'month' | 'fy';
 
-const ADMIN_SHORTCUTS = [
-  { label: 'Notices', href: '/(app)/notifications', icon: Bell, color: colors.muga },
-  { label: 'Catalog', href: '/(app)/catalog', icon: PackageSearch, color: colors.royal },
-  { label: 'Masters', href: '/(app)/masters', icon: Settings2, color: '#7C3AED' },
-  { label: 'Stock', href: '/(app)/inventory', icon: Boxes, color: '#0D9488' },
-  { label: 'Sales', href: '/(app)/sales', icon: ClipboardList, color: '#DB2777' },
-  { label: 'Accounts', href: '/(app)/accounts', icon: Wallet, color: '#CA8A04' },
-  { label: 'Reports', href: '/(app)/reports', icon: FileBarChart2, color: colors.royal },
-  { label: 'Admin', href: '/(app)/rbac', icon: Shield, color: '#475569' },
-] as const;
-
-const SELLER_SHORTCUTS = [
-  { label: 'Notices', href: '/(app)/notifications', icon: Bell, color: colors.muga },
-  { label: 'Catalog', href: '/(app)/catalog', icon: PackageSearch, color: colors.royal },
-  { label: 'My Sales', href: '/(app)/sales', icon: ClipboardList, color: '#DB2777' },
-  { label: 'Stock', href: '/(app)/inventory', icon: Boxes, color: '#0D9488' },
-] as const;
-
 export default function DashboardScreen() {
-  const { profile, isAdmin, roles } = useAuth();
+  const { profile, isAdmin, roles, hasPermission } = useAuth();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,6 +58,8 @@ export default function DashboardScreen() {
   >([]);
   const [unreadNotices, setUnreadNotices] = useState(0);
 
+  const admin = isAdmin || roles.includes('super_admin');
+
   const load = useCallback(async () => {
     setError(null);
     try {
@@ -90,7 +75,7 @@ export default function DashboardScreen() {
         }
       }
 
-      if (isAdmin || roles.includes('super_admin')) {
+      if (admin) {
         const results = await Promise.allSettled([
           getKpiTotals(),
           getOfficeStockValue(),
@@ -121,7 +106,7 @@ export default function DashboardScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [isAdmin, period, profile?.user_id, roles]);
+  }, [admin, period, profile?.user_id, roles]);
 
   useFocusEffect(
     useCallback(() => {
@@ -144,8 +129,73 @@ export default function DashboardScreen() {
     }
   };
 
-  const admin = isAdmin || roles.includes('super_admin');
-  const shortcuts = admin ? ADMIN_SHORTCUTS : SELLER_SHORTCUTS;
+  const quickLinks = [
+    {
+      label: 'জাননী বোৰ্ড / Notices',
+      subtitle: unreadNotices > 0 ? `${unreadNotices} new` : 'Open notice board',
+      href: '/(app)/(tabs)/notifications',
+      icon: Bell,
+      color: colors.muga,
+      badge: unreadNotices,
+      show: true,
+    },
+    {
+      label: 'Product Catalog',
+      subtitle: 'Browse Mekhela Chador',
+      href: '/(app)/(tabs)/catalog',
+      icon: PackageSearch,
+      color: colors.royal,
+      show: true,
+    },
+    {
+      label: 'Sales Reconcile',
+      subtitle: 'Post seller / office sale',
+      href: '/(app)/(tabs)/sales',
+      icon: ClipboardList,
+      color: '#DB2777',
+      show: admin || hasPermission('sales.reconcile'),
+    },
+    {
+      label: 'Inventory / Stock',
+      subtitle: 'Purchase · allocate · return',
+      href: '/(app)/inventory',
+      icon: Boxes,
+      color: '#0D9488',
+      show: admin || hasPermission('inventory.manage'),
+    },
+    {
+      label: 'Accounts',
+      subtitle: 'Ledger & expenses',
+      href: '/(app)/accounts',
+      icon: Wallet,
+      color: '#CA8A04',
+      show: admin || hasPermission('accounts.manage') || hasPermission('reports.export'),
+    },
+    {
+      label: 'Masters',
+      subtitle: 'Products, partners, CoA',
+      href: '/(app)/masters',
+      icon: Settings2,
+      color: '#7C3AED',
+      show: admin || hasPermission('masters.manage') || hasPermission('products.manage'),
+    },
+    {
+      label: 'Reports',
+      subtitle: 'Sales & stock',
+      href: '/(app)/reports',
+      icon: FileBarChart2,
+      color: colors.royal,
+      show: admin || hasPermission('reports.export'),
+    },
+    {
+      label: 'Users & Access',
+      subtitle: 'Staff and permissions',
+      href: '/(app)/rbac',
+      icon: Shield,
+      color: '#475569',
+      show: admin || hasPermission('users.manage') || hasPermission('rbac.manage'),
+    },
+  ].filter((r) => r.show);
 
   return (
     <Screen
@@ -168,65 +218,18 @@ export default function DashboardScreen() {
 
       <Toast message={error} />
 
-      <Pressable
-        className="mb-4 rounded-2xl bg-white p-4"
-        onPress={() => router.push('/(app)/notifications')}
-        style={{ borderLeftWidth: 4, borderLeftColor: colors.maroon }}
-      >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <View
-            style={{
-              width: 48,
-              height: 48,
-              borderRadius: 24,
-              backgroundColor: `${colors.muga}22`,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Bell color={colors.muga} size={26} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text className="text-sm font-bold text-maroon">জাননী বোৰ্ড</Text>
-            <Text className="mt-1 text-xs text-slate-500">
-              {unreadNotices > 0
-                ? `${unreadNotices} new notice${unreadNotices === 1 ? '' : 's'} for you`
-                : 'Open notice board'}
-            </Text>
-          </View>
-        </View>
-      </Pressable>
-
       {admin ? (
         <>
-          <View className="mb-4 flex-row gap-2">
-            {(
-              [
-                { key: 'day' as Period, label: 'Day', icon: Calendar },
-                { key: 'month' as Period, label: 'Month', icon: CalendarDays },
-                { key: 'fy' as Period, label: 'FY', icon: CalendarRange },
-              ] as const
-            ).map((p) => {
-              const Icon = p.icon;
-              const on = period === p.key;
-              return (
-                <Pressable
-                  key={p.key}
-                  onPress={() => setPeriod(p.key)}
-                  className="flex-1 items-center rounded-xl py-3"
-                  style={{ backgroundColor: on ? colors.maroon : colors.white }}
-                >
-                  <Icon color={on ? '#fff' : colors.muted} size={20} />
-                  <Text
-                    className="mt-1 text-xs font-semibold"
-                    style={{ color: on ? '#fff' : colors.muted }}
-                  >
-                    {p.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+          <SegmentStrip
+            value={period}
+            onChange={setPeriod}
+            equal
+            items={[
+              { key: 'day', label: 'Day', icon: Calendar },
+              { key: 'month', label: 'Month', icon: CalendarDays },
+              { key: 'fy', label: 'FY', icon: CalendarRange },
+            ]}
+          />
 
           <View className="mb-4 flex-row flex-wrap gap-2">
             <KpiCard title="Total Revenue" value={formatINR(revenue)} icon={IndianRupee} />
@@ -290,20 +293,22 @@ export default function DashboardScreen() {
         </>
       )}
 
-      <Text className="mb-2 mt-2 text-base font-bold text-ink">Open with picture</Text>
-      <View className="mb-4 flex-row flex-wrap justify-between">
-        {shortcuts.map((item) => (
-          <IconTile
-            key={item.href}
-            label={item.label}
-            icon={item.icon}
-            color={item.color}
-            badge={item.href.includes('notifications') ? unreadNotices : null}
-            onPress={() => router.push(item.href as any)}
-            size="lg"
-          />
-        ))}
-      </View>
+      <Text className="mb-2 mt-2 text-base font-bold text-ink">Open (big tap)</Text>
+      {quickLinks.map((item) => (
+        <NavRow
+          key={item.href}
+          label={item.label}
+          subtitle={item.subtitle}
+          icon={item.icon}
+          color={item.color}
+          badge={item.badge}
+          onPress={() => router.push(item.href as any)}
+        />
+      ))}
+
+      <Pressable onPress={() => router.push('/(app)/(tabs)/more')} className="mt-2 py-3">
+        <Text className="text-center text-sm font-semibold text-maroon">See all tools →</Text>
+      </Pressable>
     </Screen>
   );
 }

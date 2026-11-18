@@ -25,7 +25,7 @@ export default function LoginScreen() {
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<ScrollViewType>(null);
 
-  if (session) return <Redirect href="/(app)/dashboard" />;
+  if (session) return <Redirect href="/(app)/(tabs)/dashboard" />;
 
   const onSubmit = async () => {
     setError(null);

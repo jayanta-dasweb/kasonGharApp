@@ -1,6 +1,5 @@
 import { Redirect, Stack } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
-import { BurgerButton } from '@/components/navigation/BurgerMenu';
 import { colors } from '@/constants/theme';
 import { useAuth } from '@/lib/auth';
 
@@ -23,19 +22,16 @@ export default function AppLayout() {
         headerStyle: { backgroundColor: colors.cream },
         headerTintColor: colors.maroon,
         headerTitleStyle: { fontWeight: '700', color: colors.maroon },
-        headerLeft: () => <BurgerButton />,
+        headerShadowVisible: false,
         contentStyle: { backgroundColor: colors.cream },
       }}
     >
-      <Stack.Screen name="dashboard" options={{ title: 'Dashboard' }} />
-      <Stack.Screen name="notifications" options={{ title: 'Notice Board' }} />
-      <Stack.Screen name="catalog" options={{ title: 'Product Catalog' }} />
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="masters" options={{ title: 'Masters' }} />
       <Stack.Screen name="inventory" options={{ title: 'Inventory' }} />
       <Stack.Screen name="accounts" options={{ title: 'Accounts' }} />
-      <Stack.Screen name="sales" options={{ title: 'Sales Reconcile' }} />
       <Stack.Screen name="reports" options={{ title: 'Reports' }} />
-      <Stack.Screen name="rbac" options={{ title: 'Users & RBAC' }} />
+      <Stack.Screen name="rbac" options={{ title: 'Users & Access' }} />
     </Stack>
   );
 }

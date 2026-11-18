@@ -228,7 +228,7 @@ export function BurgerButton() {
                 onPress={async () => {
                   setOpen(false);
                   await signOut();
-                  router.replace('/(auth)/login');
+                  router.replace('/(auth)/login' as any);
                 }}
                 style={{
                   flexDirection: 'row',

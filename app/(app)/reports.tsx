@@ -1,10 +1,18 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
+import {
+  Calendar,
+  CalendarDays,
+  CalendarRange,
+  Download,
+  FileSpreadsheet,
+  UserRound,
+} from 'lucide-react-native';
 import { Button } from '@/components/ui/Button';
 import { Screen } from '@/components/ui/Screen';
+import { SegmentStrip } from '@/components/ui/SegmentStrip';
 import { Toast } from '@/components/ui/Toast';
-import { colors } from '@/constants/theme';
 import { formatINR, formatNumber } from '@/lib/format';
 import {
   exportRowsToCsv,
@@ -14,13 +22,6 @@ import {
 } from '@/services/reports';
 import { listLocations } from '@/services/masters';
 import { supabase } from '@/lib/supabase';
-
-const PERIODS: { key: ReportPeriod; label: string }[] = [
-  { key: 'day', label: 'Day-wise' },
-  { key: 'month', label: 'Month-wise' },
-  { key: 'fy', label: 'FY-wise' },
-  { key: 'salesperson', label: 'Salesperson' },
-];
 
 export default function ReportsScreen() {
   const [period, setPeriod] = useState<ReportPeriod>('salesperson');
@@ -88,30 +89,24 @@ export default function ReportsScreen() {
         </Text>
       </View>
 
-      <View className="mb-4 flex-row flex-wrap gap-2">
-        {PERIODS.map((p) => (
-          <Pressable
-            key={p.key}
-            onPress={() => {
-              setPeriod(p.key);
-              setLoading(true);
-            }}
-            className="rounded-full px-3 py-2"
-            style={{ backgroundColor: period === p.key ? colors.maroon : colors.white }}
-          >
-            <Text
-              className="text-xs font-semibold"
-              style={{ color: period === p.key ? '#fff' : colors.muted }}
-            >
-              {p.label}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
+      <SegmentStrip
+        value={period}
+        onChange={(key) => {
+          setPeriod(key);
+          setLoading(true);
+        }}
+        items={[
+          { key: 'day', label: 'Day', icon: Calendar },
+          { key: 'month', label: 'Month', icon: CalendarDays },
+          { key: 'fy', label: 'FY', icon: CalendarRange },
+          { key: 'salesperson', label: 'Seller', icon: UserRound },
+        ]}
+      />
 
       <View className="mb-4 flex-row gap-2">
         <View className="flex-1">
           <Button
+            icon={FileSpreadsheet}
             label="Excel"
             variant="secondary"
             onPress={async () => {
@@ -125,6 +120,7 @@ export default function ReportsScreen() {
         </View>
         <View className="flex-1">
           <Button
+            icon={Download}
             label="CSV Share"
             variant="ghost"
             onPress={async () => {
