@@ -28,6 +28,7 @@ export default function AppLayout() {
       }}
     >
       <Stack.Screen name="dashboard" options={{ title: 'Dashboard' }} />
+      <Stack.Screen name="notifications" options={{ title: 'Notice Board' }} />
       <Stack.Screen name="catalog" options={{ title: 'Product Catalog' }} />
       <Stack.Screen name="masters" options={{ title: 'Masters' }} />
       <Stack.Screen name="inventory" options={{ title: 'Inventory' }} />

@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
 import {
+  Bell,
   Boxes,
   ClipboardList,
   FileBarChart2,
@@ -40,6 +41,12 @@ export function BurgerButton() {
 
   const items: Item[] = [
     { label: 'Dashboard', href: '/(app)/dashboard', icon: LayoutDashboard, show: true },
+    {
+      label: 'জাননী বোৰ্ড / Notices',
+      href: '/(app)/notifications',
+      icon: Bell,
+      show: true,
+    },
     { label: 'Product Catalog', href: '/(app)/catalog', icon: PackageSearch, show: true },
     {
       label: 'Masters',

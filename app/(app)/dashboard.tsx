@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import {
+  Bell,
   Boxes,
   ClipboardList,
   FileBarChart2,
@@ -23,11 +24,13 @@ import {
   getMyStock,
   getOfficeStockValue,
 } from '@/services/inventory';
+import { countUnread } from '@/services/notifications';
 import { fetchReport, getKpiTotals } from '@/services/reports';
 
 type Period = 'day' | 'month' | 'fy';
 
 const SHORTCUTS = [
+  { label: 'Notices', href: '/(app)/notifications', icon: Bell },
   { label: 'Catalog', href: '/(app)/catalog', icon: PackageSearch },
   { label: 'Masters', href: '/(app)/masters', icon: Settings2 },
   { label: 'Stock', href: '/(app)/inventory', icon: Boxes },
@@ -52,10 +55,23 @@ export default function DashboardScreen() {
   const [searchHits, setSearchHits] = useState<
     Awaited<ReturnType<typeof searchSalespersonCatalog>>
   >([]);
+  const [unreadNotices, setUnreadNotices] = useState(0);
 
   const load = useCallback(async () => {
     setError(null);
     try {
+      if (profile?.user_id) {
+        try {
+          const n = await countUnread({
+            userId: profile.user_id,
+            roles: roles.length ? roles : ['salesperson'],
+          });
+          setUnreadNotices(n);
+        } catch {
+          setUnreadNotices(0);
+        }
+      }
+
       if (isAdmin || roles.includes('super_admin')) {
         const results = await Promise.allSettled([
           getKpiTotals(),
@@ -143,6 +159,19 @@ export default function DashboardScreen() {
       </View>
 
       <Toast message={error} />
+
+      <Pressable
+        className="mb-4 rounded-2xl bg-white p-4"
+        onPress={() => router.push('/(app)/notifications')}
+        style={{ borderLeftWidth: 4, borderLeftColor: colors.maroon }}
+      >
+        <Text className="text-sm font-bold text-maroon">জাননী বোৰ্ড</Text>
+        <Text className="mt-1 text-xs text-slate-500">
+          {unreadNotices > 0
+            ? `${unreadNotices} new notice${unreadNotices === 1 ? '' : 's'} for you`
+            : 'Open notice board for sellers & all staff'}
+        </Text>
+      </Pressable>
 
       {(isAdmin || roles.includes('super_admin')) ? (
         <>
