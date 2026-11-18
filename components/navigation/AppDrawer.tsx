@@ -83,7 +83,7 @@ export function AppDrawerContent(props: DrawerContentComponentProps) {
             />
             <View style={{ flex: 1 }}>
               <Text style={{ color: '#fff', fontSize: 18, fontWeight: '700' }}>
-                {profile?.full_name ?? 'কছন ঘৰ'}
+                {profile?.full_name ?? 'কাছন ঘৰ'}
               </Text>
               <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 2 }}>
                 {profile?.phone ?? ''}

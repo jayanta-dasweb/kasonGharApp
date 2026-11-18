@@ -5,7 +5,7 @@ type Props = {
   size?: number;
 };
 
-/** Official কছন ঘৰ circular brand mark */
+/** Official কাছন ঘৰ circular brand mark */
 export function KasonLogo({ size = 180 }: Props) {
   return (
     <View

@@ -78,7 +78,7 @@ COMMIT;
 -- Seed sample for sellers
 INSERT INTO app_notifications (title, body, audience, priority)
 SELECT
-  'স্বাগতম · কছন ঘৰ জাননী বোৰ্ড',
+  'স্বাগতম · কাছন ঘৰ জাননী বোৰ্ড',
   'Sellers: check stock allocations daily and post sales reconcile before evening close.',
   'ALL',
   'NORMAL'

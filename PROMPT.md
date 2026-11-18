@@ -1,4 +1,4 @@
-# PROJECT BLUEPRINT: KASON GHAR (কছন ঘৰ)
+# PROJECT BLUEPRINT: KASON GHAR (কাছন ঘৰ)
 # ERP, Consignment, Inventory & Accounting System for Assamese Mekhela Chador (মেখেলা চাদৰ)
 # Brand language: Assamese script only — never Hindi/Devanagari on UI.
 
