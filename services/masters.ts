@@ -1,22 +1,33 @@
 import { supabase } from '@/lib/supabase';
 
+function mapRow(row: any, idKey: string, nameKey: string) {
+  return {
+    ...row,
+    id: row[idKey],
+    name: row[nameKey] ?? row.name ?? String(row[idKey]),
+  };
+}
+
 export async function listCategories() {
   const { data, error } = await supabase
     .from('master_categories')
     .select('*')
     .order('category_name');
   if (error) throw error;
-  return (data ?? []).map((r: any) => ({
-    ...r,
-    id: r.category_id,
-    name: r.category_name,
-  }));
+  return (data ?? []).map((r) => mapRow(r, 'category_id', 'category_name'));
 }
 
-export async function createCategory(name: string) {
+export async function createCategory(input: {
+  name: string;
+  description?: string;
+}) {
   const { data, error } = await supabase
     .from('master_categories')
-    .insert({ category_name: name, is_active: true })
+    .insert({
+      category_name: input.name.trim(),
+      description: input.description?.trim() || null,
+      is_active: true,
+    })
     .select()
     .single();
   if (error) throw error;
@@ -29,17 +40,17 @@ export async function listFabrics() {
     .select('*')
     .order('fabric_name');
   if (error) throw error;
-  return (data ?? []).map((r: any) => ({
-    ...r,
-    id: r.fabric_id,
-    name: r.fabric_name,
-  }));
+  return (data ?? []).map((r) => mapRow(r, 'fabric_id', 'fabric_name'));
 }
 
-export async function createFabric(name: string) {
+export async function createFabric(input: { name: string; description?: string }) {
   const { data, error } = await supabase
     .from('master_fabrics')
-    .insert({ fabric_name: name, is_active: true })
+    .insert({
+      fabric_name: input.name.trim(),
+      description: input.description?.trim() || null,
+      is_active: true,
+    })
     .select()
     .single();
   if (error) throw error;
@@ -52,17 +63,17 @@ export async function listWeaves() {
     .select('*')
     .order('weave_name');
   if (error) throw error;
-  return (data ?? []).map((r: any) => ({
-    ...r,
-    id: r.weave_id,
-    name: r.weave_name,
-  }));
+  return (data ?? []).map((r) => mapRow(r, 'weave_id', 'weave_name'));
 }
 
-export async function createWeave(name: string) {
+export async function createWeave(input: { name: string; description?: string }) {
   const { data, error } = await supabase
     .from('master_weaves')
-    .insert({ weave_name: name, is_active: true })
+    .insert({
+      weave_name: input.name.trim(),
+      description: input.description?.trim() || null,
+      is_active: true,
+    })
     .select()
     .single();
   if (error) throw error;
@@ -78,66 +89,58 @@ export async function listFinancialYears() {
   return (data ?? []).map((r: any) => ({
     ...r,
     id: r.fy_id,
-    name: r.fy_name ?? `${r.start_date} → ${r.end_date}`,
+    name: `${r.start_date} → ${r.end_date}`,
   }));
 }
 
 export async function createFinancialYear(input: {
-  name: string;
   start_date: string;
   end_date: string;
 }) {
-  const payload: Record<string, unknown> = {
-    start_date: input.start_date,
-    end_date: input.end_date,
-  };
-  // fy_name may or may not exist
-  payload.fy_name = input.name;
   const { data, error } = await supabase
     .from('master_financial_years')
-    .insert(payload)
+    .insert({
+      start_date: input.start_date.trim(),
+      end_date: input.end_date.trim(),
+    })
     .select()
     .single();
-  if (error) {
-    // retry without fy_name
-    const retry = await supabase
-      .from('master_financial_years')
-      .insert({ start_date: input.start_date, end_date: input.end_date })
-      .select()
-      .single();
-    if (retry.error) throw retry.error;
-    return retry.data;
-  }
+  if (error) throw error;
   return data;
 }
 
 export async function listPartners(type?: string) {
   let q = supabase.from('master_partners').select('*').order('partner_name');
-  if (type === 'vendor') q = q.in('partner_type', ['vendor', 'VENDOR', 'both', 'BOTH']);
-  if (type === 'customer')
+  if (type === 'vendor') {
+    q = q.in('partner_type', ['vendor', 'VENDOR', 'both', 'BOTH']);
+  }
+  if (type === 'customer') {
     q = q.in('partner_type', ['customer', 'CUSTOMER', 'both', 'BOTH']);
+  }
   const { data, error } = await q;
   if (error) throw error;
-  return (data ?? []).map((r: any) => ({
-    ...r,
-    id: r.partner_id,
-    name: r.partner_name,
-  }));
+  return (data ?? []).map((r) => mapRow(r, 'partner_id', 'partner_name'));
 }
 
 export async function createPartner(input: {
   name: string;
   partner_type: string;
-  phone?: string | null;
-  address?: string | null;
+  phone?: string;
+  email?: string;
+  address?: string;
+  city?: string;
+  state?: string;
 }) {
   const { data, error } = await supabase
     .from('master_partners')
     .insert({
-      partner_name: input.name,
+      partner_name: input.name.trim(),
       partner_type: input.partner_type,
-      phone: input.phone ?? null,
-      address: input.address ?? null,
+      phone: input.phone?.trim() || null,
+      email: input.email?.trim() || null,
+      address: input.address?.trim() || null,
+      city: input.city?.trim() || null,
+      state: input.state?.trim() || null,
       is_active: true,
     })
     .select()
@@ -156,7 +159,7 @@ export async function listProducts(search?: string) {
   if (error) throw error;
   return (data ?? []).map((r: any) => ({
     ...r,
-    id: r.product_id ?? r.product_code,
+    id: r.product_code,
     name: r.product_name,
   }));
 }
@@ -164,6 +167,9 @@ export async function listProducts(search?: string) {
 export async function createProduct(input: {
   product_code: string;
   name: string;
+  category_id?: number | string | null;
+  fabric_id?: number | string | null;
+  weave_id?: number | string | null;
   vendor_cost_price: number;
   company_mrp: number;
   min_selling_price: number;
@@ -171,8 +177,11 @@ export async function createProduct(input: {
   const { data, error } = await supabase
     .from('master_products')
     .insert({
-      product_code: input.product_code,
-      product_name: input.name,
+      product_code: input.product_code.trim(),
+      product_name: input.name.trim(),
+      category_id: input.category_id || null,
+      fabric_id: input.fabric_id || null,
+      weave_id: input.weave_id || null,
       vendor_cost_price: input.vendor_cost_price,
       company_mrp: input.company_mrp,
       min_selling_price: input.min_selling_price,
@@ -184,54 +193,36 @@ export async function createProduct(input: {
   return data;
 }
 
-export async function updateProduct(code: string, input: Record<string, unknown>) {
+export async function listExpenseHeads() {
   const { data, error } = await supabase
-    .from('master_products')
-    .update(input)
-    .eq('product_code', code)
+    .from('master_expense_heads')
+    .select('*')
+    .order('head_name');
+  if (error) throw error;
+  return (data ?? []).map((r) => mapRow(r, 'expense_head_id', 'head_name'));
+}
+
+export async function createExpenseHead(name: string) {
+  const { data, error } = await supabase
+    .from('master_expense_heads')
+    .insert({ head_name: name.trim(), is_active: true })
     .select()
     .single();
   if (error) throw error;
   return data;
 }
 
-export async function listExpenseHeads() {
-  const { data, error } = await supabase.from('master_expense_heads').select('*');
-  if (error) throw error;
-  return (data ?? []).map((r: any) => ({
-    ...r,
-    id: r.expense_head_id ?? r.id,
-    name: r.expense_name ?? r.name ?? r.head_name,
-  }));
-}
-
-export async function createExpenseHead(name: string) {
-  const attempts = [
-    { expense_name: name, is_active: true },
-    { name, is_active: true },
-    { head_name: name, is_active: true },
-  ];
-  let lastError: unknown = null;
-  for (const payload of attempts) {
-    const { data, error } = await supabase
-      .from('master_expense_heads')
-      .insert(payload)
-      .select()
-      .single();
-    if (!error) return data;
-    lastError = error;
-  }
-  throw lastError;
-}
-
 export async function listAccounts() {
-  const { data, error } = await supabase.from('account_accounts').select('*');
+  const { data, error } = await supabase
+    .from('account_accounts')
+    .select('*')
+    .order('code');
   if (error) throw error;
   return (data ?? []).map((r: any) => ({
     ...r,
-    id: r.account_id ?? r.id,
-    name: r.account_name ?? r.name,
-    code: r.account_code ?? r.code,
+    id: r.account_id,
+    name: r.name,
+    code: r.code,
   }));
 }
 
@@ -240,29 +231,84 @@ export async function createAccount(input: {
   name: string;
   account_type: string;
 }) {
-  const attempts = [
-    {
-      account_code: input.code,
-      account_name: input.name,
-      account_type: input.account_type,
+  const { data, error } = await supabase
+    .from('account_accounts')
+    .insert({
+      code: input.code.trim(),
+      name: input.name.trim(),
+      account_type: input.account_type.trim(),
       is_active: true,
-    },
-    {
-      code: input.code,
-      name: input.name,
-      account_type: input.account_type,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function listJournals() {
+  const { data, error } = await supabase
+    .from('account_journals')
+    .select('*')
+    .order('code');
+  if (error) throw error;
+  return (data ?? []).map((r: any) => ({
+    ...r,
+    id: r.journal_id,
+    name: r.name,
+    code: r.code,
+  }));
+}
+
+export async function createJournal(input: {
+  code: string;
+  name: string;
+  type: string;
+}) {
+  const { data, error } = await supabase
+    .from('account_journals')
+    .insert({
+      code: input.code.trim(),
+      name: input.name.trim(),
+      type: input.type.trim(),
       is_active: true,
-    },
-  ];
-  let lastError: unknown = null;
-  for (const payload of attempts) {
-    const { data, error } = await supabase
-      .from('account_accounts')
-      .insert(payload)
-      .select()
-      .single();
-    if (!error) return data;
-    lastError = error;
-  }
-  throw lastError;
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function listLocations() {
+  const { data, error } = await supabase
+    .from('stock_locations')
+    .select('*')
+    .order('location_code');
+  if (error) throw error;
+  return (data ?? []).map((r: any) => ({
+    ...r,
+    id: r.location_id,
+    name: r.location_name,
+    code: r.location_code,
+  }));
+}
+
+export async function createLocation(input: {
+  code: string;
+  name: string;
+  usage: string;
+  assigned_user_id?: string | null;
+}) {
+  const { data, error } = await supabase
+    .from('stock_locations')
+    .insert({
+      location_code: input.code.trim(),
+      location_name: input.name.trim(),
+      usage: input.usage,
+      assigned_user_id: input.assigned_user_id || null,
+      is_active: true,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
 }
