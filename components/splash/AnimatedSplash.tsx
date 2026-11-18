@@ -88,8 +88,8 @@ export function AnimatedSplash({ onFinished }: Props) {
       </Animated.View>
 
       <Animated.View style={[styles.copy, titleStyle]}>
-        <Text style={styles.brandAssamese}>कसों घर</Text>
-        <Text style={styles.tagline}>Traditional Assamese Weaves</Text>
+        <Text style={styles.brandAssamese}>কছন ঘৰ</Text>
+        <Text style={styles.tagline}>পৰম্পৰাগত অসমীয়া বয়ন</Text>
       </Animated.View>
     </View>
   );
