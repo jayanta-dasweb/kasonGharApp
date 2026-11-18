@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Lock, LogIn, Phone } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { AssameseBrandName } from '@/components/brand/AssameseBrandName';
 import { KasonLogo } from '@/components/logo/KasonLogo';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -68,17 +69,14 @@ export default function LoginScreen() {
         >
           <View className="mb-8 items-center">
             <KasonLogo size={132} />
-            <Text
-              className="mt-3 text-center text-2xl font-bold text-maroon"
-              style={{ letterSpacing: 0 }}
-            >
-              {brand.nameAs}
-            </Text>
-            <Text className="mt-1 text-center text-sm font-semibold text-slate-600">
-              {brand.nameEn}
-            </Text>
+            <View className="mt-3">
+              <AssameseBrandName size={28} />
+            </View>
             <Text className="mt-1 text-center text-xs text-slate-400">
               {brand.loginSubtitleEn}
+            </Text>
+            <Text className="mt-1 text-center text-[10px] text-slate-300">
+              {brand.bundleStamp}
             </Text>
           </View>
 

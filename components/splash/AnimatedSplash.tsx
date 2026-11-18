@@ -8,6 +8,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
+import { AssameseBrandName } from '@/components/brand/AssameseBrandName';
 import { KasonLogo } from '@/components/logo/KasonLogo';
 import { brand } from '@/constants/brand';
 import { colors } from '@/constants/theme';
@@ -89,9 +90,9 @@ export function AnimatedSplash({ onFinished }: Props) {
       </Animated.View>
 
       <Animated.View style={[styles.copy, titleStyle]}>
-        <Text style={styles.brandAssamese}>{brand.nameAs}</Text>
-        <Text style={styles.brandEn}>{brand.nameEn}</Text>
+        <AssameseBrandName size={30} />
         <Text style={styles.tagline}>{brand.taglineEn}</Text>
+        <Text style={styles.stamp}>{brand.bundleStamp}</Text>
       </Animated.View>
     </View>
   );
@@ -123,24 +124,17 @@ const styles = StyleSheet.create({
     marginTop: 28,
     alignItems: 'center',
   },
-  brandAssamese: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: colors.maroon,
-    letterSpacing: 0, // letterSpacing breaks Assamese matras (া)
-  },
-  brandEn: {
-    marginTop: 4,
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.maroonSoft,
-  },
   tagline: {
-    marginTop: 6,
+    marginTop: 8,
     fontSize: 12,
     fontWeight: '600',
     color: colors.maroonSoft,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
+  },
+  stamp: {
+    marginTop: 8,
+    fontSize: 10,
+    color: '#94A3B8',
   },
 });

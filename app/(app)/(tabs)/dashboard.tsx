@@ -221,7 +221,8 @@ export default function DashboardScreen() {
           {brand.welcomeAs}, {profile?.full_name?.split(' ')[0] ?? 'User'}
         </Text>
         <Text className="mt-1 text-sm text-slate-500" style={{ letterSpacing: 0 }}>
-          {brand.nameAs} · {brand.nameEn}
+          {brand.nameAsParts.ka}
+          {brand.nameAsParts.son} {brand.nameAsParts.ghar} · {brand.nameEn}
         </Text>
         <Text className="mt-0.5 text-xs text-slate-400">
           {profile?.phone} · {(roles[0] ?? 'staff').replace('_', ' ')}
