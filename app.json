@@ -36,7 +36,9 @@
           "backgroundColor": "#F7F1E8"
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-sharing",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true
