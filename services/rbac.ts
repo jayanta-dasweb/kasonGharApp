@@ -131,8 +131,37 @@ export async function getUserRoleIds(userId: string) {
     .select('role_id')
     .eq('model_id', userId)
     .eq('model_type', 'App\\Models\\User');
-  if (error) throw error;
+  if (error) {
+    const retry = await supabase
+      .from('model_has_roles')
+      .select('role_id')
+      .eq('model_id', userId);
+    if (retry.error) throw retry.error;
+    return (retry.data ?? []).map((r) => r.role_id);
+  }
   return (data ?? []).map((r) => r.role_id);
+}
+
+/** Map user_id → role names for staff list */
+export async function mapUserRoles() {
+  const { data: links, error } = await supabase
+    .from('model_has_roles')
+    .select('model_id, role_id');
+  if (error) throw error;
+  const roleIds = [...new Set((links ?? []).map((l) => l.role_id))];
+  const { data: roles } = roleIds.length
+    ? await supabase.from('roles').select('id, name').in('id', roleIds)
+    : { data: [] as any[] };
+  const byId = new Map((roles ?? []).map((r) => [r.id, String(r.name)]));
+  const map: Record<string, string[]> = {};
+  for (const l of links ?? []) {
+    const name = byId.get(l.role_id);
+    if (!name) continue;
+    const key = String(l.model_id);
+    if (!map[key]) map[key] = [];
+    map[key].push(name);
+  }
+  return map;
 }
 
 export async function listRoles() {
@@ -181,6 +210,19 @@ export async function onboardStaff(input: {
 }) {
   const phone = input.phone.replace(/\D/g, '');
   if (phone.length !== 10) throw new Error('Phone must be 10 digits');
+  if (!input.full_name.trim()) throw new Error('Full name required');
+  if (!input.password || input.password.length < 6) {
+    throw new Error('Password must be at least 6 characters');
+  }
+  if (!input.role_id) throw new Error('Select a role first');
+
+  const { data: roleRow, error: roleLookupErr } = await supabase
+    .from('roles')
+    .select('id, name')
+    .eq('id', input.role_id)
+    .maybeSingle();
+  if (roleLookupErr) throw roleLookupErr;
+  if (!roleRow) throw new Error('Selected role not found — seed roles first');
 
   const email = phoneToAuthEmail(phone);
   const { data: authData, error: authErr } = await supabase.auth.signUp({
@@ -194,7 +236,7 @@ export async function onboardStaff(input: {
     .from('users_master')
     .insert({
       user_id: authData.user.id,
-      full_name: input.full_name,
+      full_name: input.full_name.trim(),
       phone,
       email,
       status: 'ACTIVE',
@@ -203,31 +245,36 @@ export async function onboardStaff(input: {
     .single();
   if (profileErr) throw profileErr;
 
-  const { error: roleErr } = await supabase.from('model_has_roles').insert({
+  // Clear any stale role links then assign
+  await supabase.from('model_has_roles').delete().eq('model_id', profile.user_id);
+
+  const rolePayload = {
     role_id: input.role_id,
     model_type: 'App\\Models\\User',
     model_id: profile.user_id,
-  });
-  if (roleErr) throw roleErr;
+  };
+  const { error: roleErr } = await supabase.from('model_has_roles').insert(rolePayload);
+  if (roleErr) {
+    const retry = await supabase.from('model_has_roles').insert({
+      role_id: input.role_id,
+      model_id: profile.user_id,
+    });
+    if (retry.error) throw retry.error;
+  }
 
-  const { data: role } = await supabase
-    .from('roles')
-    .select('name')
-    .eq('id', input.role_id)
-    .maybeSingle();
-
-  if (role?.name?.toLowerCase().includes('sales')) {
+  const roleName = String(roleRow.name ?? '').toLowerCase();
+  if (roleName.includes('sales')) {
     const code = `LOC-SP-${phone.slice(-4)}`;
     await supabase.from('stock_locations').insert({
       location_code: code,
-      location_name: `${input.full_name} Bag`,
+      location_name: `${input.full_name.trim()} Bag`,
       usage: 'SALESPERSON',
       assigned_user_id: profile.user_id,
       is_active: true,
     });
   }
 
-  return profile;
+  return { profile, role_name: roleRow.name as string };
 }
 
 export async function listAuditLogs(limit = 50) {
