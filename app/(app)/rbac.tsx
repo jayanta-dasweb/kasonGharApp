@@ -81,7 +81,7 @@ export default function RbacScreen() {
     rolePerms.some((rp) => rp.role_id === roleIdVal && rp.permission_id === permId);
 
   return (
-    <Screen title="Admin & RBAC" loading={loading}>
+    <Screen title="Users & Access" loading={loading}>
       <Toast message={error} />
       <Toast message={ok} type="success" />
 

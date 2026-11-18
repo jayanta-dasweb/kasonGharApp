@@ -102,7 +102,7 @@ export function BurgerButton() {
       show: isAdmin || hasPermission('reports.export'),
     },
     {
-      label: 'Users & RBAC',
+      label: 'Users & Access',
       href: '/(app)/rbac',
       icon: Shield,
       color: '#475569',

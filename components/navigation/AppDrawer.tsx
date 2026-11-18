@@ -56,7 +56,7 @@ export function AppDrawerContent(props: DrawerContentComponentProps) {
       show: isAdmin || hasPermission('reports.export'),
     },
     {
-      label: 'Users & RBAC',
+      label: 'Users & Access',
       href: '/(app)/rbac',
       icon: Shield,
       show:
