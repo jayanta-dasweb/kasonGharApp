@@ -229,12 +229,19 @@ export default function MastersScreen() {
         <Button label="Save to Database" onPress={onSave} loading={saving} />
       </View>
 
-      {items.map((item) => (
-        <View key={item.id} className="mb-2 rounded-xl bg-white px-3 py-3">
+      {items.length === 0 ? (
+        <Text className="text-sm text-slate-500">No records yet. Add one above.</Text>
+      ) : null}
+
+      {items.map((item, idx) => (
+        <View
+          key={String(item.id ?? item.product_code ?? item.partner_id ?? idx)}
+          className="mb-2 rounded-xl bg-white px-3 py-3"
+        >
           <Text className="font-semibold text-ink">
             {item.product_code ? `${item.product_code} · ` : ''}
             {item.code ? `${item.code} · ` : ''}
-            {item.name}
+            {item.name ?? item.product_name ?? item.partner_name ?? item.category_name}
           </Text>
           {item.partner_type ? (
             <Text className="text-xs text-slate-500">{item.partner_type}</Text>

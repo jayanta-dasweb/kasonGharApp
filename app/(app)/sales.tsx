@@ -37,9 +37,9 @@ export default function SalesScreen() {
       setProducts(p);
       setCustomers(c);
       setUsers(u);
-      if (p[0]) setProductId(p[0].id);
-      if (c[0]) setCustomerId(c[0].id);
-      if (u[0]) setSalespersonId(u[0].id);
+      if (p[0]) setProductId(String(p[0].product_code ?? p[0].id));
+      if (c[0]) setCustomerId(String(c[0].id ?? c[0].partner_id));
+      if (u[0]) setSalespersonId(String(u[0].user_id));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Load failed');
     } finally {
@@ -103,42 +103,51 @@ export default function SalesScreen() {
 
       <View className="rounded-2xl bg-white p-4">
         <Text className="mb-2 text-sm font-medium text-slate-600">Product</Text>
-        {products.slice(0, 20).map((p) => (
-          <Pressable key={p.id} onPress={() => setProductId(p.id)} className="mb-1 py-2">
-            <Text style={{ color: productId === p.id ? colors.royal : colors.ink }}>
-              {productId === p.id ? '● ' : '○ '}
-              {p.product_code} · {p.name}
+        {products.slice(0, 20).map((p) => {
+          const id = String(p.product_code ?? p.id);
+          return (
+          <Pressable key={id} onPress={() => setProductId(id)} className="mb-1 py-2">
+            <Text style={{ color: productId === id ? colors.royal : colors.ink }}>
+              {productId === id ? '● ' : '○ '}
+              {p.product_code} · {p.name ?? p.product_name}
             </Text>
           </Pressable>
-        ))}
+          );
+        })}
 
         {channel === 'consignment' ? (
           <>
             <Text className="mb-2 mt-2 text-sm font-medium text-slate-600">Salesperson</Text>
-            {users.map((u) => (
+            {users.map((u) => {
+              const id = String(u.user_id);
+              return (
               <Pressable
-                key={u.id}
-                onPress={() => setSalespersonId(u.id)}
+                key={id}
+                onPress={() => setSalespersonId(id)}
                 className="mb-1 py-2"
               >
-                <Text style={{ color: salespersonId === u.id ? colors.royal : colors.ink }}>
-                  {salespersonId === u.id ? '● ' : '○ '}
+                <Text style={{ color: salespersonId === id ? colors.royal : colors.ink }}>
+                  {salespersonId === id ? '● ' : '○ '}
                   {u.full_name}
                 </Text>
               </Pressable>
-            ))}
+              );
+            })}
           </>
         ) : null}
 
         <Text className="mb-2 mt-2 text-sm font-medium text-slate-600">Customer</Text>
-        {customers.map((c) => (
-          <Pressable key={c.id} onPress={() => setCustomerId(c.id)} className="mb-1 py-2">
-            <Text style={{ color: customerId === c.id ? colors.royal : colors.ink }}>
-              {customerId === c.id ? '● ' : '○ '}
-              {c.name}
+        {customers.map((c) => {
+          const id = String(c.id ?? c.partner_id);
+          return (
+          <Pressable key={id} onPress={() => setCustomerId(id)} className="mb-1 py-2">
+            <Text style={{ color: customerId === id ? colors.royal : colors.ink }}>
+              {customerId === id ? '● ' : '○ '}
+              {c.name ?? c.partner_name}
             </Text>
           </Pressable>
-        ))}
+          );
+        })}
 
         <Input label="Quantity" value={qty} onChangeText={setQty} keyboardType="numeric" />
         <Input

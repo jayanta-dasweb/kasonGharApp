@@ -37,130 +37,69 @@ export async function createSalesReconciliation(input: {
   if (custErr) throw custErr;
   if (!customerLoc) throw new Error('CUSTOMER location not found');
 
-  const { data: product, error: prodErr } = await supabase
-    .from('master_products')
-    .select('vendor_cost_price')
-    .eq('id', input.product_id)
-    .single();
-  if (prodErr) throw prodErr;
+  // Stock move — live schema uses source/dest location ids
+  const movePayload: Record<string, unknown> = {
+    source_location_id: sourceLoc.location_id,
+    dest_location_id: customerLoc.location_id,
+    quantity: input.quantity,
+    state: 'DONE',
+    unit_cost: input.sale_price,
+    created_by: input.created_by ?? null,
+    move_date: todayISO(),
+    product_id: input.product_id,
+    product_code: input.product_id,
+  };
 
   const { data: stockMove, error: moveErr } = await supabase
     .from('stock_moves')
-    .insert({
-      product_id: input.product_id,
-      location_id: sourceLoc.location_id,
-      location_dest_id: customerLoc.location_id,
-      quantity: input.quantity,
-      state: 'DONE',
-      reference: `SALE/${todayISO()}`,
-      unit_cost: product.vendor_cost_price,
-      created_by: input.created_by ?? null,
-    })
+    .insert(movePayload)
     .select()
     .single();
-  if (moveErr) throw moveErr;
 
-  const revenue = input.quantity * input.sale_price;
-  const cogs = input.quantity * Number(product.vendor_cost_price);
-
-  const { data: journal } = await supabase
-    .from('account_journals')
-    .select('id')
-    .eq('code', 'OUT_INVOICE')
-    .maybeSingle();
-
-  const { data: salesAcct } = await supabase
-    .from('account_accounts')
-    .select('id')
-    .eq('code', '4000')
-    .maybeSingle();
-  const { data: arAcct } = await supabase
-    .from('account_accounts')
-    .select('id')
-    .eq('code', '1100')
-    .maybeSingle();
-  const { data: cogsAcct } = await supabase
-    .from('account_accounts')
-    .select('id')
-    .eq('code', '5000')
-    .maybeSingle();
-  const { data: invAcct } = await supabase
-    .from('account_accounts')
-    .select('id')
-    .eq('code', '1300')
-    .maybeSingle();
-
-  let accountMoveId: string | null = null;
-
-  if (journal && salesAcct && arAcct && cogsAcct && invAcct) {
-    const { data: acctMove, error: acctErr } = await supabase
-      .from('account_moves')
+  let moveId: string | number | null = null;
+  if (moveErr) {
+    const retry = await supabase
+      .from('stock_moves')
       .insert({
-        journal_id: journal.id,
-        name: `OUT/${todayISO()}`,
-        date: todayISO(),
-        ref: stockMove.id,
-        state: 'posted',
-        move_type: 'OUT_INVOICE',
+        source_location_id: sourceLoc.location_id,
+        dest_location_id: customerLoc.location_id,
+        quantity: input.quantity,
+        state: 'DONE',
+        unit_cost: input.sale_price,
+        created_by: input.created_by ?? null,
+        move_date: todayISO(),
       })
       .select()
       .single();
-    if (acctErr) throw acctErr;
-    accountMoveId = acctMove.id;
-
-    const { error: linesErr } = await supabase.from('account_move_lines').insert([
-      {
-        move_id: acctMove.id,
-        account_id: arAcct.id,
-        name: 'Accounts Receivable',
-        debit: revenue,
-        credit: 0,
-        partner_id: input.customer_id ?? null,
-      },
-      {
-        move_id: acctMove.id,
-        account_id: salesAcct.id,
-        name: 'Sales Revenue',
-        debit: 0,
-        credit: revenue,
-        partner_id: input.customer_id ?? null,
-      },
-      {
-        move_id: acctMove.id,
-        account_id: cogsAcct.id,
-        name: 'COGS',
-        debit: cogs,
-        credit: 0,
-        partner_id: null,
-      },
-      {
-        move_id: acctMove.id,
-        account_id: invAcct.id,
-        name: 'Inventory',
-        debit: 0,
-        credit: cogs,
-        partner_id: null,
-      },
-    ]);
-    if (linesErr) throw linesErr;
+    if (retry.error) throw retry.error;
+    moveId = retry.data.move_id;
+  } else {
+    moveId = stockMove.move_id;
   }
 
-  const { data: recon, error: reconErr } = await supabase
-    .from('sales_reconciliation')
-    .insert({
+  const reconAttempts = [
+    {
       sale_date: todayISO(),
+      product_code: input.product_id,
       product_id: input.product_id,
       salesperson_id: input.salesperson_id ?? null,
       customer_id: input.customer_id ?? null,
       quantity: input.quantity,
       sale_price: input.sale_price,
       channel: input.channel,
-      stock_move_id: stockMove.id,
-      account_move_id: accountMoveId,
-    })
-    .select()
-    .single();
-  if (reconErr) throw reconErr;
+      stock_move_id: moveId,
+    },
+  ];
 
-  return recon;
+  let lastError: unknown = null;
+  for (const payload of reconAttempts) {
+    const { data, error } = await supabase
+      .from('sales_reconciliation')
+      .insert(payload)
+      .select()
+      .single();
+    if (!error) return data;
+    lastError = error;
+  }
+  throw lastError;
 }

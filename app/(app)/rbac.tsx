@@ -196,16 +196,16 @@ export default function RbacScreen() {
 
       {tab === 'audit'
         ? audits.map((a) => (
-            <View key={a.id} className="mb-2 rounded-xl bg-white p-3">
+            <View key={a.log_id} className="mb-2 rounded-xl bg-white p-3">
               <Text className="font-semibold text-ink">
                 {a.action} · {a.table_name}
               </Text>
               <Text className="text-xs text-slate-500">{a.created_at}</Text>
               <Text className="mt-1 font-mono text-[10px] text-slate-600">
-                before: {JSON.stringify(a.before_data)}
+                before: {JSON.stringify(a.old_data)}
               </Text>
               <Text className="font-mono text-[10px] text-slate-600">
-                after: {JSON.stringify(a.after_data)}
+                after: {JSON.stringify(a.new_data)}
               </Text>
             </View>
           ))

@@ -7,7 +7,6 @@ import { Toast } from '@/components/ui/Toast';
 import { formatINR } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
 import { searchAdminCatalog, searchSalespersonCatalog } from '@/services/catalog';
-import { getQuantsForProduct } from '@/services/inventory';
 
 export default function CatalogScreen() {
   const { isAdmin } = useAuth();
@@ -15,8 +14,6 @@ export default function CatalogScreen() {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [expanded, setExpanded] = useState<string | null>(null);
-  const [quants, setQuants] = useState<any[]>([]);
 
   const load = useCallback(
     async (q = search) => {
@@ -28,6 +25,7 @@ export default function CatalogScreen() {
         setRows(data);
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Catalog load failed');
+        setRows([]);
       } finally {
         setLoading(false);
       }
@@ -48,20 +46,6 @@ export default function CatalogScreen() {
     await load(q);
   };
 
-  const toggleExpand = async (productId: string) => {
-    if (expanded === productId) {
-      setExpanded(null);
-      return;
-    }
-    setExpanded(productId);
-    try {
-      const q = await getQuantsForProduct(productId);
-      setQuants(q);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Stock breakdown failed');
-    }
-  };
-
   return (
     <Screen title="Product Catalog" loading={loading}>
       <Toast message={error} />
@@ -69,53 +53,43 @@ export default function CatalogScreen() {
         label="Search"
         value={search}
         onChangeText={onSearch}
-        placeholder="product_code, category, fabric, color"
+        placeholder="product code or name"
       />
 
-      {rows.map((p) => {
-        const id = isAdmin ? p.id : p.product_id;
-        return (
-          <View key={id} className="mb-3 rounded-2xl bg-white p-4">
-            <Text className="text-base font-bold text-royal">
-              {p.product_code} · {p.name}
+      {rows.length === 0 && !error ? (
+        <View className="mt-6 rounded-2xl bg-white p-4">
+          <Text className="text-base font-semibold text-maroon">No products yet</Text>
+          <Text className="mt-1 text-sm text-slate-500">
+            Open Masters from the menu (☰) and add Categories / Products first.
+          </Text>
+        </View>
+      ) : null}
+
+      {rows.map((p) => (
+        <View key={p.product_code} className="mb-3 rounded-2xl bg-white p-4">
+          <Text className="text-base font-bold text-maroon">
+            {p.product_code} · {p.product_name ?? p.name}
+          </Text>
+          <Text className="mt-1 text-xs text-slate-500">
+            {[p.category_name, p.fabric_name, p.weave_name, p.color]
+              .filter(Boolean)
+              .join(' · ') || '—'}
+          </Text>
+          <Text className="mt-2 text-sm text-ink">
+            MRP {formatINR(p.company_mrp)} · Min {formatINR(p.min_selling_price)}
+          </Text>
+          {isAdmin && p.vendor_cost_price != null ? (
+            <Text className="mt-1 text-sm text-muga">
+              Vendor cost {formatINR(p.vendor_cost_price)}
             </Text>
-            <Text className="mt-1 text-xs text-slate-500">
-              {[p.master_categories?.name ?? p.category, p.master_fabrics?.name ?? p.fabric, p.color]
-                .filter(Boolean)
-                .join(' · ')}
+          ) : null}
+          {!isAdmin ? (
+            <Text className="mt-1 text-xs text-slate-600">
+              Office {p.office_qty ?? 0} · Mine {p.my_qty ?? 0}
             </Text>
-            <Text className="mt-2 text-sm text-ink">
-              MRP {formatINR(p.company_mrp)} · Min {formatINR(p.min_selling_price)}
-            </Text>
-            {isAdmin ? (
-              <>
-                <Text className="mt-1 text-sm text-muga">
-                  Vendor cost {formatINR(p.vendor_cost_price)}
-                </Text>
-                <Text
-                  className="mt-2 text-sm font-semibold text-royal"
-                  onPress={() => toggleExpand(id)}
-                >
-                  {expanded === id ? 'Hide stock' : 'Stock breakdown'}
-                </Text>
-                {expanded === id
-                  ? quants.map((q) => (
-                      <Text key={q.id} className="mt-1 text-xs text-slate-600">
-                        {(q.stock_locations as any)?.location_name ??
-                          (q.stock_locations as any)?.name}
-                        : {q.quantity}
-                      </Text>
-                    ))
-                  : null}
-              </>
-            ) : (
-              <Text className="mt-1 text-xs text-slate-600">
-                Office {p.office_qty} · Mine {p.my_qty}
-              </Text>
-            )}
-          </View>
-        );
-      })}
+          ) : null}
+        </View>
+      ))}
     </Screen>
   );
 }

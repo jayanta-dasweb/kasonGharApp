@@ -44,9 +44,9 @@ export default function InventoryScreen() {
       setVendors(v);
       setProducts(p);
       setUsers(u);
-      if (v[0]) setVendorId(v[0].id);
-      if (p[0]) setProductId(p[0].id);
-      if (u[0]) setSalespersonId(u[0].id);
+      if (v[0]) setVendorId(String(v[0].id ?? v[0].partner_id));
+      if (p[0]) setProductId(String(p[0].product_code ?? p[0].id));
+      if (u[0]) setSalespersonId(String(u[0].user_id));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Load failed');
     } finally {
@@ -140,14 +140,17 @@ export default function InventoryScreen() {
         {mode === 'purchase' ? (
           <>
             <Text className="mb-2 text-sm font-medium text-slate-600">Vendor</Text>
-            {vendors.map((v) => (
-              <Pressable key={v.id} onPress={() => setVendorId(v.id)} className="mb-1 py-2">
-                <Text style={{ color: vendorId === v.id ? colors.royal : colors.ink }}>
-                  {vendorId === v.id ? '● ' : '○ '}
-                  {v.name}
+            {vendors.map((v) => {
+              const id = String(v.id ?? v.partner_id);
+              return (
+              <Pressable key={id} onPress={() => setVendorId(id)} className="mb-1 py-2">
+                <Text style={{ color: vendorId === id ? colors.royal : colors.ink }}>
+                  {vendorId === id ? '● ' : '○ '}
+                  {v.name ?? v.partner_name}
                 </Text>
               </Pressable>
-            ))}
+              );
+            })}
             <Input label="Invoice No" value={invoice} onChangeText={setInvoice} />
             <Input
               label="Unit Cost"
@@ -159,30 +162,36 @@ export default function InventoryScreen() {
         ) : (
           <>
             <Text className="mb-2 text-sm font-medium text-slate-600">Salesperson</Text>
-            {users.map((u) => (
+            {users.map((u) => {
+              const id = String(u.user_id);
+              return (
               <Pressable
-                key={u.id}
-                onPress={() => setSalespersonId(u.id)}
+                key={id}
+                onPress={() => setSalespersonId(id)}
                 className="mb-1 py-2"
               >
-                <Text style={{ color: salespersonId === u.id ? colors.royal : colors.ink }}>
-                  {salespersonId === u.id ? '● ' : '○ '}
+                <Text style={{ color: salespersonId === id ? colors.royal : colors.ink }}>
+                  {salespersonId === id ? '● ' : '○ '}
                   {u.full_name}
                 </Text>
               </Pressable>
-            ))}
+              );
+            })}
           </>
         )}
 
         <Text className="mb-2 mt-2 text-sm font-medium text-slate-600">Product</Text>
-        {products.slice(0, 20).map((p) => (
-          <Pressable key={p.id} onPress={() => setProductId(p.id)} className="mb-1 py-2">
-            <Text style={{ color: productId === p.id ? colors.royal : colors.ink }}>
-              {productId === p.id ? '● ' : '○ '}
-              {p.product_code} · {p.name}
+        {products.slice(0, 20).map((p) => {
+          const id = String(p.product_code ?? p.id);
+          return (
+          <Pressable key={id} onPress={() => setProductId(id)} className="mb-1 py-2">
+            <Text style={{ color: productId === id ? colors.royal : colors.ink }}>
+              {productId === id ? '● ' : '○ '}
+              {p.product_code} · {p.name ?? p.product_name}
             </Text>
           </Pressable>
-        ))}
+          );
+        })}
 
         <Input label="Quantity" value={qty} onChangeText={setQty} keyboardType="numeric" />
         <Button label="Commit to Supabase" onPress={onSubmit} loading={saving} />
